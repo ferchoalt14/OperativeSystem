@@ -4,15 +4,13 @@
  */
 package operativesystem;
 
-import javax.swing.SwingUtilities;
-
 /**
  *
  * @author User
  */
-public class Main {
-    public static void main(String[] args) {
-             GestorArchivosBinarios.inicializarSistema();
-        SwingUtilities.invokeLater(() -> new PantallaLogin().setVisible(true));
+public class CuentaDesactivadaException extends Exception {
+
+    public CuentaDesactivadaException(String username) {
+        super("La cuenta del usuario '" + username + "' está desactivada.");
     }
 }

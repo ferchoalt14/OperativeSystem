@@ -4,15 +4,13 @@
  */
 package operativesystem;
 
-import javax.swing.SwingUtilities;
-
 /**
  *
  * @author User
  */
-public class Main {
-    public static void main(String[] args) {
-             GestorArchivosBinarios.inicializarSistema();
-        SwingUtilities.invokeLater(() -> new PantallaLogin().setVisible(true));
+public class UsernameDuplicadoException extends Exception {
+
+    public UsernameDuplicadoException(String username) {
+        super("El username '" + username + "' ya existe en el sistema.");
     }
 }

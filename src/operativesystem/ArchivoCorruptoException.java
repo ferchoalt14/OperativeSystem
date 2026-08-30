@@ -4,15 +4,13 @@
  */
 package operativesystem;
 
-import javax.swing.SwingUtilities;
-
 /**
  *
  * @author User
  */
-public class Main {
-    public static void main(String[] args) {
-             GestorArchivosBinarios.inicializarSistema();
-        SwingUtilities.invokeLater(() -> new PantallaLogin().setVisible(true));
+public class ArchivoCorruptoException extends Exception {
+
+    public ArchivoCorruptoException(String nombreArchivo, Throwable causa) {
+        super("El archivo '" + nombreArchivo + "' está corrupto o no se pudo leer.", causa);
     }
 }
