@@ -56,9 +56,18 @@ public class GestorArchivosBinarios {
             usuarios.add(Usuario.crearAdministradorPorDefecto());
             try {
                 guardarUsuarios(usuarios);
+                crearCarpetasUsuario(Usuario.crearAdministradorPorDefecto().getUsername());
             } catch (IOException e) {
                
                 System.err.println("No se pudo inicializar usuarios.sop: " + e.getMessage());
+            }
+        } else {
+            try {
+                for (Usuario usuario : cargarUsuarios()) {
+                    crearCarpetasUsuario(usuario.getUsername());
+                }
+            } catch (ArchivoCorruptoException e) {
+                System.err.println("No se pudo restaurar la estructura de usuarios: " + e.getMessage());
             }
         }
     }
