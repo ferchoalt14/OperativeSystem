@@ -1,11 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package operativesystem;
 
 import javax.swing.*;
@@ -15,15 +7,7 @@ import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.io.File;
 
-/**
- * Paleta de colores y utilidades visuales de Mini-Windows.
- * Se encarga de reemplazar el aspecto gris por defecto de Swing
- * por una interfaz moderna (basada en Nimbus) y de generar los
- * íconos circulares que se usan como accesos directos a las apps
- * y como foto de perfil.
- *
- * @author User
- */
+
 public final class TemaUI {
 
     private TemaUI() {
@@ -53,7 +37,7 @@ public final class TemaUI {
         return COLORES_APP[Math.floorMod(indice, COLORES_APP.length)];
     }
 
-    /** Activa Nimbus (si está disponible) y aplica la paleta de colores sobre él. */
+
     public static void aplicar() {
         try {
             for (UIManager.LookAndFeelInfo info : UIManager.getInstalledLookAndFeels()) {
@@ -63,7 +47,7 @@ public final class TemaUI {
                 }
             }
         } catch (Exception ignored) {
-            // Si Nimbus no está disponible, se sigue con la apariencia por defecto.
+
         }
 
         UIManager.put("control", FONDO);
@@ -81,7 +65,7 @@ public final class TemaUI {
         UIManager.put("defaultFont", new FontUIResource(fuenteBase));
     }
 
-    /** Ícono circular con iniciales/texto centrado, usado como avatar o ícono de app. */
+
     public static Icon crearIconoCircular(String texto, Color color, int diametro) {
         return new Icon() {
             @Override
@@ -113,7 +97,7 @@ public final class TemaUI {
         };
     }
 
-    /** Ícono circular recortado a partir de una imagen (foto de perfil). */
+
     public static Icon crearIconoCircularDeImagen(File archivo, int diametro) {
         Image imagen = new ImageIcon(archivo.getAbsolutePath()).getImage();
         return new Icon() {
@@ -138,7 +122,7 @@ public final class TemaUI {
         };
     }
 
-    /** Botón de "aplicación": círculo de color con iniciales arriba y el nombre debajo. */
+
     public static JButton crearBotonApp(String nombre, String iniciales, Color color) {
         JButton boton = new JButton(nombre);
         boton.setVerticalTextPosition(SwingConstants.BOTTOM);
@@ -157,6 +141,30 @@ public final class TemaUI {
     public static JButton crearBotonApp(String nombre, String iniciales, Color color, ActionListener accion) {
         JButton boton = crearBotonApp(nombre, iniciales, color);
         boton.addActionListener(accion);
+        return boton;
+    }
+
+    public static JButton crearBotonPrimario(String texto) {
+        JButton boton = new JButton(texto) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                Color relleno = getModel().isPressed() ? ACCENT_OSCURO : ACCENT;
+                g2.setColor(relleno);
+                g2.fillRoundRect(0, 0, getWidth(), getHeight(), 10, 10);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        boton.setContentAreaFilled(false);
+        boton.setOpaque(false);
+        boton.setBorderPainted(false);
+        boton.setForeground(Color.WHITE);
+        boton.setFocusPainted(false);
+        boton.setFont(boton.getFont().deriveFont(Font.BOLD));
+        boton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        boton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return boton;
     }
 }

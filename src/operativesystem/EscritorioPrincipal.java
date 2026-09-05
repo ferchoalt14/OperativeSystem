@@ -29,6 +29,7 @@ public class EscritorioPrincipal extends JFrame {
     private JPanel panelIconos;
     private JButton btnAvatarSuperior;
     private File archivoCopiado;
+    private final Map<String, JInternalFrame> ventanasAbiertas = new HashMap<>();
 
     public EscritorioPrincipal(Usuario usuario) {
         super("Mini-Windows - " + usuario.getUsername() +
@@ -133,6 +134,8 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private void abrirPerfil() {
+        if (traerAlFrenteSiExiste("perfil")) return;
+
         JInternalFrame ventana = new JInternalFrame("Mi perfil", true, true, true, true);
         ventana.setSize(340, 440);
         ventana.setLayout(new BorderLayout(10, 10));
@@ -173,7 +176,7 @@ public class EscritorioPrincipal extends JFrame {
         ventana.add(panelInfo, BorderLayout.CENTER);
         ventana.add(btnCambiarFoto, BorderLayout.SOUTH);
 
-        mostrarVentanaInterna(ventana);
+        mostrarVentanaInterna("perfil", ventana);
     }
 
     private JPanel crearLineaPerfil(String etiqueta, String valor) {
@@ -222,6 +225,8 @@ public class EscritorioPrincipal extends JFrame {
 
 
     private void abrirExplorador() {
+        if (traerAlFrenteSiExiste("explorador")) return;
+
         File raiz = obtenerRaizDeTrabajo();
         if (!raiz.exists()) raiz.mkdirs();
 
@@ -266,7 +271,7 @@ public class EscritorioPrincipal extends JFrame {
         ventana.add(scroll, BorderLayout.CENTER);
         ventana.add(panelBotones, BorderLayout.SOUTH);
 
-        mostrarVentanaInterna(ventana);
+        mostrarVentanaInterna("explorador", ventana);
     }
 
     private DefaultMutableTreeNode construirNodo(File archivo, Comparator<File> comparador) {
@@ -438,7 +443,7 @@ public class EscritorioPrincipal extends JFrame {
                     try {
                         Files.move(archivo.toPath(), nombreDisponible(carpetaDestino, archivo.getName()).toPath());
                     } catch (IOException ignored) {
-                        // El resto de archivos continúa organizándose aunque uno falle.
+                        
                     }
                 }
             }
@@ -453,6 +458,8 @@ public class EscritorioPrincipal extends JFrame {
 
 
     private void abrirEditorTexto() {
+        if (traerAlFrenteSiExiste("editor")) return;
+
         JInternalFrame ventana = new JInternalFrame("Editor de texto", true, true, true, true);
         ventana.setSize(500, 400);
         ventana.setLayout(new BorderLayout());
@@ -512,7 +519,7 @@ public class EscritorioPrincipal extends JFrame {
         ventana.add(barraFormato, BorderLayout.NORTH);
         ventana.add(scroll, BorderLayout.CENTER);
 
-        mostrarVentanaInterna(ventana);
+        mostrarVentanaInterna("editor", ventana);
     }
 
     private void aplicarEstiloASeleccionOTodo(JTextPane areaTexto, StyledDocument doc, MutableAttributeSet attrs) {
@@ -570,6 +577,8 @@ public class EscritorioPrincipal extends JFrame {
 
 
     private void abrirVisorImagenes() {
+        if (traerAlFrenteSiExiste("visor")) return;
+
         JInternalFrame ventana = new JInternalFrame("Visor de imágenes", true, true, true, true);
         ventana.setSize(450, 420);
         ventana.setLayout(new BorderLayout());
@@ -621,7 +630,7 @@ public class EscritorioPrincipal extends JFrame {
         ventana.add(scroll, BorderLayout.CENTER);
         ventana.add(panelBotones, BorderLayout.SOUTH);
 
-        mostrarVentanaInterna(ventana);
+        mostrarVentanaInterna("visor", ventana);
     }
 
     private void mostrarImagenActual(JLabel lblImagen, List<File> imagenes, int indice) {
@@ -636,10 +645,12 @@ public class EscritorioPrincipal extends JFrame {
         lblImagen.setText(null);
     }
 
-    // ---------------------------------------------------------------
-    // CONSOLA DE COMANDOS (imita el CMD de Windows)
-    // ---------------------------------------------------------------
+
+    // CONSOLA DE COMANDOS 
+
     private void abrirConsola() {
+        if (traerAlFrenteSiExiste("consola")) return;
+
         JInternalFrame ventana = new JInternalFrame("Consola", true, true, true, true);
         ventana.setSize(500, 350);
         ventana.setLayout(new BorderLayout());
@@ -667,7 +678,7 @@ public class EscritorioPrincipal extends JFrame {
         ventana.add(scroll, BorderLayout.CENTER);
         ventana.add(campoComando, BorderLayout.SOUTH);
 
-        mostrarVentanaInterna(ventana);
+        mostrarVentanaInterna("consola", ventana);
     }
 
     private String procesarComandoConsola(String comando, File[] carpetaActual, File raizPermitida) {
@@ -732,10 +743,12 @@ public class EscritorioPrincipal extends JFrame {
                 && new File(nombre).getName().equals(nombre);
     }
 
-    // ---------------------------------------------------------------
-    // REPRODUCTOR DE MÚSICA (pendiente - punto de partida para el equipo)
-    // ---------------------------------------------------------------
+
+    // REPRODUCTOR DE MÚSICA (pendiente)
+
     private void abrirReproductor() {
+        if (traerAlFrenteSiExiste("reproductor")) return;
+
         JInternalFrame ventana = new JInternalFrame("Reproductor", true, true, true, true);
         ventana.setSize(360, 260);
         ventana.setLayout(new BorderLayout());
@@ -756,13 +769,15 @@ public class EscritorioPrincipal extends JFrame {
         ventana.add(lblInfo, BorderLayout.CENTER);
         ventana.add(controles, BorderLayout.SOUTH);
 
-        mostrarVentanaInterna(ventana);
+        mostrarVentanaInterna("reproductor", ventana);
     }
 
-    // ---------------------------------------------------------------
-    // INSTA+ (pendiente - debe vivir en una sola pantalla integrada)
-    // ---------------------------------------------------------------
+
+    // INSTA+ (pendiente)
+
     private void abrirInstaPlus() {
+        if (traerAlFrenteSiExiste("instaplus")) return;
+
         JInternalFrame ventana = new JInternalFrame("INSTA+", true, true, true, true);
         ventana.setSize(420, 320);
         ventana.setLayout(new BorderLayout());
@@ -775,11 +790,13 @@ public class EscritorioPrincipal extends JFrame {
                 SwingConstants.CENTER);
 
         ventana.add(lblInfo, BorderLayout.CENTER);
-        mostrarVentanaInterna(ventana);
+        mostrarVentanaInterna("instaplus", ventana);
     }
 
    
     private void abrirAdministrarUsuarios() {
+        if (traerAlFrenteSiExiste("administrar")) return;
+
         try {
             List<Usuario> usuarios = GestorArchivosBinarios.cargarUsuarios();
 
@@ -842,7 +859,7 @@ public class EscritorioPrincipal extends JFrame {
             panelBotones.add(btnEliminar);
             ventana.add(panelBotones, BorderLayout.SOUTH);
 
-            mostrarVentanaInterna(ventana);
+            mostrarVentanaInterna("administrar", ventana);
 
         } catch (ArchivoCorruptoException ex) {
             JOptionPane.showMessageDialog(this, "No se pudo leer la lista de usuarios.",
@@ -851,7 +868,30 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     
-    private void mostrarVentanaInterna(JInternalFrame ventana) {
+
+    private boolean traerAlFrenteSiExiste(String clave) {
+        JInternalFrame existente = ventanasAbiertas.get(clave);
+        if (existente == null || existente.isClosed()) {
+            return false;
+        }
+        try {
+            if (existente.isIcon()) {
+                existente.setIcon(false);
+            }
+            existente.setSelected(true);
+        } catch (java.beans.PropertyVetoException ignored) {
+        }
+        return true;
+    }
+
+    private void mostrarVentanaInterna(String clave, JInternalFrame ventana) {
+        ventanasAbiertas.put(clave, ventana);
+        ventana.addInternalFrameListener(new javax.swing.event.InternalFrameAdapter() {
+            @Override
+            public void internalFrameClosed(javax.swing.event.InternalFrameEvent e) {
+                ventanasAbiertas.remove(clave);
+            }
+        });
         escritorio.add(ventana);
         ventana.setVisible(true);
         try {

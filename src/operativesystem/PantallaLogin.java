@@ -1,7 +1,3 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package operativesystem;
 import javax.swing.*;
 import java.awt.*;
@@ -84,8 +80,7 @@ public class PantallaLogin extends JFrame {
         txtLoginPassword = new JPasswordField(15);
         panel.add(txtLoginPassword, gbc);
 
-        JButton btnLogin = new JButton("Log In");
-        estilizarBotonPrimario(btnLogin);
+        JButton btnLogin = TemaUI.crearBotonPrimario("Log In");
         btnLogin.addActionListener(this::onLogin);
         gbc.gridy = 4; gbc.gridx = 0; gbc.gridwidth = 2;
         panel.add(btnLogin, gbc);
@@ -98,13 +93,6 @@ public class PantallaLogin extends JFrame {
         panel.add(btnIrRegistro, gbc);
 
         return panel;
-    }
-
-    private void estilizarBotonPrimario(JButton boton) {
-        boton.setBackground(TemaUI.ACCENT);
-        boton.setForeground(Color.WHITE);
-        boton.setFocusPainted(false);
-        boton.setFont(boton.getFont().deriveFont(Font.BOLD));
     }
 
     private void onLogin(ActionEvent e) {
@@ -226,8 +214,7 @@ public class PantallaLogin extends JFrame {
         panel.add(panelFoto, gbc);
         fila++;
 
-        JButton btnRegistrar = new JButton("Registrar");
-        estilizarBotonPrimario(btnRegistrar);
+        JButton btnRegistrar = TemaUI.crearBotonPrimario("Registrar");
         btnRegistrar.addActionListener(this::onRegistrar);
         gbc.gridy = fila; gbc.gridx = 0; gbc.gridwidth = 2;
         panel.add(btnRegistrar, gbc);
