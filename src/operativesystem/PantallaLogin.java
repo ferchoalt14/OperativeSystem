@@ -8,6 +8,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 
 
@@ -15,6 +16,12 @@ public class PantallaLogin extends JFrame {
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel panelContenedor = new JPanel(cardLayout);
+
+    // La contraseña debe tener al menos 8 caracteres, una mayúscula y un carácter especial.
+    private static final Pattern PATRON_PASSWORD_SEGURA =
+            Pattern.compile("^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$");
+    private static final String REQUISITOS_PASSWORD =
+            "Mínimo 8 caracteres, con al menos 1 mayúscula y 1 carácter especial (@, #, $, %, !, etc.)";
 
 
     private JTextField txtLoginUsername;
@@ -32,10 +39,11 @@ public class PantallaLogin extends JFrame {
     public PantallaLogin() {
         super("Mini-Windows - Inicio de sesión");
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        setSize(480, 420);
+        setSize(480, 440);
         setLocationRelativeTo(null);
         setResizable(false);
 
+        panelContenedor.setBackground(TemaUI.FONDO);
         panelContenedor.add(construirPanelLogin(), "LOGIN");
         panelContenedor.add(construirPanelRegistro(), "REGISTRO");
         add(panelContenedor);
@@ -46,47 +54,57 @@ public class PantallaLogin extends JFrame {
     
     private JPanel construirPanelLogin() {
         JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(TemaUI.FONDO);
         panel.setBorder(BorderFactory.createEmptyBorder(30, 40, 30, 40));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
+        JLabel lblIcono = new JLabel(TemaUI.crearIconoCircular("MW", TemaUI.ACCENT, 64));
+        lblIcono.setHorizontalAlignment(SwingConstants.CENTER);
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        panel.add(lblIcono, gbc);
+
         JLabel lblTitulo = new JLabel("Mini-Windows", SwingConstants.CENTER);
         lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 22));
-        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
+        lblTitulo.setForeground(TemaUI.ACCENT_OSCURO);
+        gbc.gridy = 1;
         panel.add(lblTitulo, gbc);
 
         gbc.gridwidth = 1;
-        gbc.gridy = 1; gbc.gridx = 0;
+        gbc.gridy = 2; gbc.gridx = 0;
         panel.add(new JLabel("Usuario:"), gbc);
         gbc.gridx = 1;
         txtLoginUsername = new JTextField(15);
         panel.add(txtLoginUsername, gbc);
 
-        gbc.gridy = 2; gbc.gridx = 0;
+        gbc.gridy = 3; gbc.gridx = 0;
         panel.add(new JLabel("Contraseña:"), gbc);
         gbc.gridx = 1;
         txtLoginPassword = new JPasswordField(15);
         panel.add(txtLoginPassword, gbc);
 
         JButton btnLogin = new JButton("Log In");
+        estilizarBotonPrimario(btnLogin);
         btnLogin.addActionListener(this::onLogin);
-        gbc.gridy = 3; gbc.gridx = 0; gbc.gridwidth = 2;
+        gbc.gridy = 4; gbc.gridx = 0; gbc.gridwidth = 2;
         panel.add(btnLogin, gbc);
 
         JButton btnIrRegistro = new JButton("Crear cuenta");
+        btnIrRegistro.setContentAreaFilled(false);
+        btnIrRegistro.setForeground(TemaUI.ACCENT_OSCURO);
         btnIrRegistro.addActionListener(e -> cardLayout.show(panelContenedor, "REGISTRO"));
-        gbc.gridy = 4;
+        gbc.gridy = 5;
         panel.add(btnIrRegistro, gbc);
 
-        JLabel lblInfoAdmin = new JLabel(
-                "<html><center>Usuario administrador por defecto:<br>admin / admin123</center></html>",
-                SwingConstants.CENTER);
-        lblInfoAdmin.setForeground(Color.GRAY);
-        gbc.gridy = 5;
-        panel.add(lblInfoAdmin, gbc);
-
         return panel;
+    }
+
+    private void estilizarBotonPrimario(JButton boton) {
+        boton.setBackground(TemaUI.ACCENT);
+        boton.setForeground(Color.WHITE);
+        boton.setFocusPainted(false);
+        boton.setFont(boton.getFont().deriveFont(Font.BOLD));
     }
 
     private void onLogin(ActionEvent e) {
@@ -138,6 +156,7 @@ public class PantallaLogin extends JFrame {
 
     private JPanel construirPanelRegistro() {
         JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBackground(TemaUI.FONDO);
         panel.setBorder(BorderFactory.createEmptyBorder(20, 40, 20, 40));
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(6, 6, 6, 6);
@@ -145,6 +164,7 @@ public class PantallaLogin extends JFrame {
 
         JLabel lblTitulo = new JLabel("Crear cuenta", SwingConstants.CENTER);
         lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 20));
+        lblTitulo.setForeground(TemaUI.ACCENT_OSCURO);
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         panel.add(lblTitulo, gbc);
         gbc.gridwidth = 1;
@@ -179,6 +199,13 @@ public class PantallaLogin extends JFrame {
         panel.add(txtRegPassword, gbc);
         fila++;
 
+        gbc.gridy = fila; gbc.gridx = 1;
+        JLabel lblRequisitos = new JLabel("<html>" + REQUISITOS_PASSWORD + "</html>");
+        lblRequisitos.setFont(lblRequisitos.getFont().deriveFont(Font.PLAIN, 10f));
+        lblRequisitos.setForeground(TemaUI.TEXTO_SUAVE);
+        panel.add(lblRequisitos, gbc);
+        fila++;
+
         gbc.gridy = fila; gbc.gridx = 0;
         panel.add(new JLabel("Edad:"), gbc);
         gbc.gridx = 1;
@@ -190,6 +217,7 @@ public class PantallaLogin extends JFrame {
         panel.add(new JLabel("Foto de perfil:"), gbc);
         gbc.gridx = 1;
         JPanel panelFoto = new JPanel(new BorderLayout(5, 0));
+        panelFoto.setOpaque(false);
         lblRegFoto = new JLabel("(ninguna seleccionada)");
         JButton btnElegirFoto = new JButton("Elegir...");
         btnElegirFoto.addActionListener(e -> elegirFoto());
@@ -199,12 +227,15 @@ public class PantallaLogin extends JFrame {
         fila++;
 
         JButton btnRegistrar = new JButton("Registrar");
+        estilizarBotonPrimario(btnRegistrar);
         btnRegistrar.addActionListener(this::onRegistrar);
         gbc.gridy = fila; gbc.gridx = 0; gbc.gridwidth = 2;
         panel.add(btnRegistrar, gbc);
         fila++;
 
         JButton btnVolver = new JButton("Volver al Log In");
+        btnVolver.setContentAreaFilled(false);
+        btnVolver.setForeground(TemaUI.ACCENT_OSCURO);
         btnVolver.addActionListener(e -> cardLayout.show(panelContenedor, "LOGIN"));
         gbc.gridy = fila;
         panel.add(btnVolver, gbc);
@@ -234,6 +265,13 @@ public class PantallaLogin extends JFrame {
         if (nombre.isEmpty() || username.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Completa todos los campos obligatorios.",
                     "Datos incompletos", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
+        if (!PATRON_PASSWORD_SEGURA.matcher(password).matches()) {
+            JOptionPane.showMessageDialog(this,
+                    "La contraseña no cumple los requisitos mínimos:\n" + REQUISITOS_PASSWORD,
+                    "Contraseña insegura", JOptionPane.WARNING_MESSAGE);
             return;
         }
 

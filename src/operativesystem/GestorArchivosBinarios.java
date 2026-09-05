@@ -176,4 +176,30 @@ public class GestorArchivosBinarios {
         }
         guardarUsuarios(usuarios);
     }
+
+  
+    public static void eliminarUsuario(String username)
+            throws ArchivoCorruptoException, IOException {
+
+        List<Usuario> usuarios = cargarUsuarios();
+        boolean eliminado = usuarios.removeIf(u -> u.getUsername().equalsIgnoreCase(username));
+        if (!eliminado) {
+            return;
+        }
+        guardarUsuarios(usuarios);
+        eliminarCarpetaRecursivamente(new File(rutaCarpetaUsuario(username)));
+    }
+
+    private static void eliminarCarpetaRecursivamente(File archivo) {
+        if (!archivo.exists()) {
+            return;
+        }
+        File[] hijos = archivo.listFiles();
+        if (hijos != null) {
+            for (File hijo : hijos) {
+                eliminarCarpetaRecursivamente(hijo);
+            }
+        }
+        archivo.delete();
+    }
 }
