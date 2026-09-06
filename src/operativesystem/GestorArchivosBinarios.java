@@ -1,157 +1,93 @@
-/*
- * Click nbfs://nbhost/SystemFileSystem/Templates/Licenses/license-default.txt to change this license
- * Click nbfs://nbhost/SystemFileSystem/Templates/Classes/Class.java to edit this template
- */
 package operativesystem;
+
 import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
 public class GestorArchivosBinarios {
-
-
-    private static final String CARPETA_RESPALDO =
-            System.getProperty("user.home") + File.separator + "MiniWindows_Z";
-
-   
-    public static String ROOT_PATH =
-            System.getProperty("os.name").toLowerCase().contains("win")
-                    ? "Z:" + File.separator
-                    : System.getProperty("user.home") + File.separator + "Z" + File.separator;
-
-    private static final boolean ES_WINDOWS =
-            System.getProperty("os.name").toLowerCase().contains("win");
-
-    private static final Object LOCK = new Object();
-
-    private static String archivoUsuariosPath() {
-        return ROOT_PATH + "usuarios.sop";
-    }
-
-   
-    public static void inicializarSistema() {
-        File raiz = new File(ROOT_PATH);
-
-        if (!raiz.exists()) {
-            raiz.mkdirs();
-        }
-
-        
-        if (!raiz.exists() && ES_WINDOWS) {
-            montarUnidadZAutomaticamente();
-            raiz = new File(ROOT_PATH);
-        }
-
-        
-        if (!raiz.exists()) {
-            ROOT_PATH = CARPETA_RESPALDO + File.separator;
-            raiz = new File(ROOT_PATH);
-            raiz.mkdirs();
-            System.err.println("No se pudo montar Z:\\, usando carpeta local: " + ROOT_PATH);
-        }
-
-        File archivoUsuarios = new File(archivoUsuariosPath());
-        if (!archivoUsuarios.exists()) {
-            List<Usuario> usuarios = new ArrayList<>();
-            usuarios.add(Usuario.crearAdministradorPorDefecto());
-            try {
-                guardarUsuarios(usuarios);
-                crearCarpetasUsuario(Usuario.crearAdministradorPorDefecto().getUsername());
-            } catch (IOException e) {
-               
-                System.err.println("No se pudo inicializar usuarios.sop: " + e.getMessage());
-            }
-        } else {
-            try {
-                for (Usuario usuario : cargarUsuarios()) {
-                    crearCarpetasUsuario(usuario.getUsername());
-                }
-            } catch (ArchivoCorruptoException e) {
-                System.err.println("No se pudo restaurar la estructura de usuarios: " + e.getMessage());
-            }
-        }
-    }
-
-   
-    private static void montarUnidadZAutomaticamente() {
-        try {
-            File carpetaReal = new File(CARPETA_RESPALDO);
-            carpetaReal.mkdirs();
-
-            ProcessBuilder pb = new ProcessBuilder(
-                    "cmd", "/c", "subst", "Z:", carpetaReal.getAbsolutePath());
-            Process proceso = pb.start();
-            proceso.waitFor();
-        } catch (IOException | InterruptedException e) {
-            System.err.println("No se pudo ejecutar 'subst' automáticamente: " + e.getMessage());
-        }
-    }
-
     
-    public static void guardarUsuarios(List<Usuario> usuarios) throws IOException {
-        synchronized (LOCK) {
-            try (ObjectOutputStream oos = new ObjectOutputStream(
-                    new FileOutputStream(archivoUsuariosPath()))) {
-                oos.writeObject(usuarios);
+    private static final String RUTA_USERS = "Z:/users.ins";
+    private static final String RUTA_RAIZ = "Z:/";
+
+    public static void inicializarSistema() {
+        File raiz = new File(RUTA_RAIZ);
+        if (!raiz.exists()) {
+            raiz.mkdirs();
+        }
+        File file = new File(RUTA_USERS);
+        if (!file.exists()) {
+            crearAdminPorDefecto(); 
+        } else {
+            
+            try {
+                List<Usuario> usuarios = cargarUsuarios();
+                boolean modificado = false;
+                for (Usuario u : usuarios) {
+                    if (u.getUsername().equalsIgnoreCase("admin") && !u.isActiva()) {
+                        u.setActiva(true);
+                        modificado = true;
+                    }
+                }
+                if (modificado) guardarUsuarios(usuarios);
+            } catch (Exception e) {
+               
             }
         }
     }
 
-   
-    @SuppressWarnings("unchecked")
     public static List<Usuario> cargarUsuarios() throws ArchivoCorruptoException {
-        synchronized (LOCK) {
-            String rutaArchivo = archivoUsuariosPath();
-            File archivo = new File(rutaArchivo);
-            if (!archivo.exists()) {
-                return new ArrayList<>();
-            }
-            try (ObjectInputStream ois = new ObjectInputStream(
-                    new FileInputStream(archivo))) {
-                return (List<Usuario>) ois.readObject();
-            } catch (IOException | ClassNotFoundException | ClassCastException e) {
-                throw new ArchivoCorruptoException(rutaArchivo, e);
-            }
+        List<Usuario> usuarios = new ArrayList<>();
+        File file = new File(RUTA_USERS);
+        if (!file.exists()) {
+            crearAdminPorDefecto(); 
+        }
+        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
+            usuarios = (List<Usuario>) ois.readObject();
+        } catch (EOFException e) {
+            
+        } catch (Exception e) {
+            throw new ArchivoCorruptoException(file.getName(), e);
+        }
+        return usuarios;
+    }
+
+    private static void guardarUsuarios(List<Usuario> usuarios) throws IOException {
+        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(RUTA_USERS))) {
+            oos.writeObject(usuarios);
         }
     }
 
-  
-    public static void registrarUsuario(Usuario nuevo)
-            throws UsernameDuplicadoException, ArchivoCorruptoException, IOException {
-
-        List<Usuario> usuarios = cargarUsuarios();
-
-        for (Usuario u : usuarios) {
-            if (u.getUsername().equalsIgnoreCase(nuevo.getUsername())) {
-                throw new UsernameDuplicadoException(nuevo.getUsername());
-            }
+    private static void crearAdminPorDefecto() {
+        File raiz = new File(RUTA_RAIZ);
+        if (!raiz.exists()) raiz.mkdirs();
+        
+        List<Usuario> lista = new ArrayList<>();
+        Usuario admin = new Usuario("Administrador", 'M', "admin", "admin123", 99, "", true);
+        lista.add(admin);
+        try {
+            guardarUsuarios(lista);
+            crearCarpetasUsuario("admin");
+        } catch (IOException e) {
+            System.out.println("Error al crear admin: " + e.getMessage());
         }
-
-        usuarios.add(nuevo);
-        guardarUsuarios(usuarios);
-        crearCarpetasUsuario(nuevo.getUsername());
     }
 
-   
     public static void crearCarpetasUsuario(String username) {
-        String base = ROOT_PATH + username + File.separator;
-        new File(base).mkdirs();
+        String base = RUTA_RAIZ + username + "/";
         new File(base + "Mis Documentos").mkdirs();
-        new File(base + "Música").mkdirs();
-        new File(base + "Mis Imágenes").mkdirs();
+        new File(base + "Musica").mkdirs();
+        new File(base + "Mis Imagenes").mkdirs();
+        new File(base + "imagenes").mkdirs();
+        new File(base + "folders_personales").mkdirs();
+        new File(base + "stickers_personales").mkdirs();
     }
-
     
     public static String rutaCarpetaUsuario(String username) {
-        return ROOT_PATH + username + File.separator;
+        return RUTA_RAIZ + username;
     }
 
-   
-    public static Usuario autenticar(String username, String password)
-            throws CuentaDesactivadaException, ArchivoCorruptoException {
-
+    public static Usuario autenticar(String username, String password) throws CuentaDesactivadaException, ArchivoCorruptoException {
         List<Usuario> usuarios = cargarUsuarios();
-
         for (Usuario u : usuarios) {
             if (u.getUsername().equals(username) && u.getPassword().equals(password)) {
                 if (!u.isActiva()) {
@@ -163,10 +99,20 @@ public class GestorArchivosBinarios {
         return null; 
     }
 
-   
-    public static void actualizarUsuario(Usuario actualizado)
-            throws ArchivoCorruptoException, IOException {
+    public static void registrarUsuario(Usuario nuevo) throws UsernameDuplicadoException, ArchivoCorruptoException, IOException {
+        List<Usuario> usuarios = cargarUsuarios();
+        for (Usuario u : usuarios) {
+            if (u.getUsername().equalsIgnoreCase(nuevo.getUsername())) {
+                throw new UsernameDuplicadoException(nuevo.getUsername());
+            }
+        }
+        nuevo.setActiva(true);
+        usuarios.add(nuevo);
+        guardarUsuarios(usuarios);
+        crearCarpetasUsuario(nuevo.getUsername());
+    }
 
+    public static void actualizarUsuario(Usuario actualizado) throws ArchivoCorruptoException, IOException {
         List<Usuario> usuarios = cargarUsuarios();
         for (int i = 0; i < usuarios.size(); i++) {
             if (usuarios.get(i).getUsername().equals(actualizado.getUsername())) {
@@ -177,29 +123,41 @@ public class GestorArchivosBinarios {
         guardarUsuarios(usuarios);
     }
 
-  
-    public static void eliminarUsuario(String username)
-            throws ArchivoCorruptoException, IOException {
-
+    public static void eliminarUsuario(String username) throws ArchivoCorruptoException, IOException {
+        if (username.equalsIgnoreCase("admin")) {
+            throw new IOException("No se puede eliminar la cuenta de administrador.");
+        }
+        
         List<Usuario> usuarios = cargarUsuarios();
         boolean eliminado = usuarios.removeIf(u -> u.getUsername().equalsIgnoreCase(username));
-        if (!eliminado) {
-            return;
+        
+        if (eliminado) {
+            guardarUsuarios(usuarios);
+            borrarCarpetaRecursiva(new File(RUTA_RAIZ + username)); 
         }
-        guardarUsuarios(usuarios);
-        eliminarCarpetaRecursivamente(new File(rutaCarpetaUsuario(username)));
     }
 
-    private static void eliminarCarpetaRecursivamente(File archivo) {
-        if (!archivo.exists()) {
-            return;
-        }
-        File[] hijos = archivo.listFiles();
-        if (hijos != null) {
-            for (File hijo : hijos) {
-                eliminarCarpetaRecursivamente(hijo);
+    private static void borrarCarpetaRecursiva(File archivo) {
+        if (archivo.isDirectory()) {
+            File[] hijos = archivo.listFiles();
+            if (hijos != null) {
+                for (File hijo : hijos) {
+                    borrarCarpetaRecursiva(hijo);
+                }
             }
         }
         archivo.delete();
+    }
+
+    public static boolean cambiarPassword(String username, String passActual, String nuevaPass) throws ArchivoCorruptoException, IOException {
+        List<Usuario> usuarios = cargarUsuarios();
+        for (Usuario u : usuarios) {
+            if (u.getUsername().equals(username) && u.getPassword().equals(passActual)) {
+                u.setPassword(nuevaPass);
+                guardarUsuarios(usuarios);
+                return true;
+            }
+        }
+        return false;
     }
 }

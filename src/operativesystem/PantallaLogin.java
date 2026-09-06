@@ -4,7 +4,6 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
-import java.util.regex.Pattern;
 
 
 
@@ -12,13 +11,6 @@ public class PantallaLogin extends JFrame {
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel panelContenedor = new JPanel(cardLayout);
-
-    // La contraseña debe tener al menos 8 caracteres, una mayúscula y un carácter especial.
-    private static final Pattern PATRON_PASSWORD_SEGURA =
-            Pattern.compile("^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$");
-    private static final String REQUISITOS_PASSWORD =
-            "Mínimo 8 caracteres, con al menos 1 mayúscula y 1 carácter especial (@, #, $, %, !, etc.)";
-
 
     private JTextField txtLoginUsername;
     private JPasswordField txtLoginPassword;
@@ -78,7 +70,7 @@ public class PantallaLogin extends JFrame {
         panel.add(new JLabel("Contraseña:"), gbc);
         gbc.gridx = 1;
         txtLoginPassword = new JPasswordField(15);
-        panel.add(txtLoginPassword, gbc);
+        panel.add(TemaUI.crearCampoPassword(txtLoginPassword), gbc);
 
         JButton btnLogin = TemaUI.crearBotonPrimario("Log In");
         btnLogin.addActionListener(this::onLogin);
@@ -184,11 +176,11 @@ public class PantallaLogin extends JFrame {
         panel.add(new JLabel("Password:"), gbc);
         gbc.gridx = 1;
         txtRegPassword = new JPasswordField(15);
-        panel.add(txtRegPassword, gbc);
+        panel.add(TemaUI.crearCampoPassword(txtRegPassword), gbc);
         fila++;
 
         gbc.gridy = fila; gbc.gridx = 1;
-        JLabel lblRequisitos = new JLabel("<html>" + REQUISITOS_PASSWORD + "</html>");
+        JLabel lblRequisitos = new JLabel("<html>" + TemaUI.REQUISITOS_PASSWORD + "</html>");
         lblRequisitos.setFont(lblRequisitos.getFont().deriveFont(Font.PLAIN, 10f));
         lblRequisitos.setForeground(TemaUI.TEXTO_SUAVE);
         panel.add(lblRequisitos, gbc);
@@ -255,9 +247,9 @@ public class PantallaLogin extends JFrame {
             return;
         }
 
-        if (!PATRON_PASSWORD_SEGURA.matcher(password).matches()) {
+        if (!TemaUI.PATRON_PASSWORD_SEGURA.matcher(password).matches()) {
             JOptionPane.showMessageDialog(this,
-                    "La contraseña no cumple los requisitos mínimos:\n" + REQUISITOS_PASSWORD,
+                    "La contraseña no cumple los requisitos mínimos:\n" + TemaUI.REQUISITOS_PASSWORD,
                     "Contraseña insegura", JOptionPane.WARNING_MESSAGE);
             return;
         }

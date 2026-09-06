@@ -1,4 +1,5 @@
 package operativesystem;
+
 import javax.swing.*;
 import javax.swing.text.*;
 import javax.swing.text.rtf.RTFEditorKit;
@@ -12,20 +13,10 @@ import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
 
-
 public class EscritorioPrincipal extends JFrame {
 
     private final Usuario usuarioActual;
-    private final JDesktopPane escritorio = new JDesktopPane() {
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setPaint(new GradientPaint(0, 0, TemaUI.ACCENT_CLARO, 0, getHeight(), TemaUI.FONDO));
-            g2.fillRect(0, 0, getWidth(), getHeight());
-            g2.dispose();
-            super.paintComponent(g);
-        }
-    };
+    private final JDesktopPane escritorio;
     private JPanel panelIconos;
     private JButton btnAvatarSuperior;
     private File archivoCopiado;
@@ -35,6 +26,30 @@ public class EscritorioPrincipal extends JFrame {
         super("Mini-Windows - " + usuario.getUsername() +
                 (usuario.isAdministrador() ? "  [ADMINISTRADOR]" : ""));
         this.usuarioActual = usuario;
+
+       
+        this.escritorio = new JDesktopPane() {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g.create();
+                
+                if (usuarioActual.getRutaWallpaper() != null && !usuarioActual.getRutaWallpaper().isEmpty()) {
+                    File imgFile = new File(usuarioActual.getRutaWallpaper());
+                    if (imgFile.exists()) {
+                        Image bg = new ImageIcon(imgFile.getAbsolutePath()).getImage();
+                        g2.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+                    } else {
+                        g2.setPaint(new GradientPaint(0, 0, TemaUI.ACCENT_CLARO, 0, getHeight(), TemaUI.FONDO));
+                        g2.fillRect(0, 0, getWidth(), getHeight());
+                    }
+                } else {
+                    g2.setPaint(new GradientPaint(0, 0, TemaUI.ACCENT_CLARO, 0, getHeight(), TemaUI.FONDO));
+                    g2.fillRect(0, 0, getWidth(), getHeight());
+                }
+                g2.dispose();
+            }
+        };
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setSize(1000, 650);
@@ -53,7 +68,6 @@ public class EscritorioPrincipal extends JFrame {
         add(construirBarraSuperior(), BorderLayout.NORTH);
         add(escritorio, BorderLayout.CENTER);
     }
-
 
     private JPanel construirPanelIconos() {
         JPanel panel = new JPanel(new FlowLayout(FlowLayout.LEFT, 28, 28));
@@ -137,7 +151,7 @@ public class EscritorioPrincipal extends JFrame {
         if (traerAlFrenteSiExiste("perfil")) return;
 
         JInternalFrame ventana = new JInternalFrame("Mi perfil", true, true, true, true);
-        ventana.setSize(340, 440);
+        ventana.setSize(340, 520);
         ventana.setLayout(new BorderLayout(10, 10));
         ((JComponent) ventana.getContentPane()).setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
@@ -155,6 +169,8 @@ public class EscritorioPrincipal extends JFrame {
         panelInfo.add(crearLineaPerfil("Tipo de cuenta:",
                 usuarioActual.isAdministrador() ? "Administrador" : "Estándar"));
 
+        JPanel panelBotonesPerfil = new JPanel(new GridLayout(3, 1, 5, 5));
+        
         JButton btnCambiarFoto = new JButton("Cambiar foto de perfil");
         btnCambiarFoto.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser();
@@ -171,10 +187,33 @@ public class EscritorioPrincipal extends JFrame {
                 }
             }
         });
+        
+        JButton btnCambiarFondo = new JButton("Cambiar fondo de escritorio");
+        btnCambiarFondo.addActionListener(e -> {
+            JFileChooser chooser = new JFileChooser();
+            chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
+                    "Imágenes (.png, .jpg)", "png", "jpg", "jpeg"));
+            if (chooser.showOpenDialog(ventana) == JFileChooser.APPROVE_OPTION) {
+                usuarioActual.setRutaWallpaper(chooser.getSelectedFile().getAbsolutePath());
+                try {
+                    GestorArchivosBinarios.actualizarUsuario(usuarioActual);
+                    escritorio.repaint(); 
+                } catch (Exception ex) {
+                    JOptionPane.showMessageDialog(ventana, "Error guardando fondo: " + ex.getMessage());
+                }
+            }
+        });
+
+        JButton btnCambiarPass = new JButton("Cambiar Contraseña");
+        btnCambiarPass.addActionListener(e -> abrirCambiarPassword());
+
+        panelBotonesPerfil.add(btnCambiarFoto);
+        panelBotonesPerfil.add(btnCambiarFondo);
+        panelBotonesPerfil.add(btnCambiarPass);
 
         ventana.add(lblFoto, BorderLayout.NORTH);
         ventana.add(panelInfo, BorderLayout.CENTER);
-        ventana.add(btnCambiarFoto, BorderLayout.SOUTH);
+        ventana.add(panelBotonesPerfil, BorderLayout.SOUTH);
 
         mostrarVentanaInterna("perfil", ventana);
     }
@@ -192,6 +231,117 @@ public class EscritorioPrincipal extends JFrame {
         return linea;
     }
 
+    private void abrirCambiarPassword() {
+        if (traerAlFrenteSiExiste("cambiarPassword")) return;
+
+        JInternalFrame ventana = new JInternalFrame("Cambiar contraseña", true, true, false, true);
+        ventana.setSize(360, 300);
+        ventana.setLayout(new GridBagLayout());
+        ((JComponent) ventana.getContentPane()).setBorder(BorderFactory.createEmptyBorder(18, 18, 18, 18));
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(6, 6, 6, 6);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weightx = 1;
+
+        JPasswordField pwdActual = new JPasswordField(14);
+        JPasswordField pwdNueva = new JPasswordField(14);
+        JPasswordField pwdConfirmar = new JPasswordField(14);
+
+        int fila = 0;
+
+        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 2;
+        JLabel lblTitulo = new JLabel("Cambiar contraseña");
+        lblTitulo.setFont(lblTitulo.getFont().deriveFont(Font.BOLD, 15f));
+        lblTitulo.setForeground(TemaUI.ACCENT_OSCURO);
+        ventana.add(lblTitulo, gbc);
+        gbc.gridwidth = 1;
+        fila++;
+
+        gbc.gridx = 0; gbc.gridy = fila;
+        ventana.add(new JLabel("Contraseña actual:"), gbc);
+        gbc.gridx = 1;
+        ventana.add(TemaUI.crearCampoPassword(pwdActual), gbc);
+        fila++;
+
+        gbc.gridx = 0; gbc.gridy = fila;
+        ventana.add(new JLabel("Nueva contraseña:"), gbc);
+        gbc.gridx = 1;
+        ventana.add(TemaUI.crearCampoPassword(pwdNueva), gbc);
+        fila++;
+
+        gbc.gridx = 0; gbc.gridy = fila;
+        ventana.add(new JLabel("Confirmar nueva:"), gbc);
+        gbc.gridx = 1;
+        ventana.add(TemaUI.crearCampoPassword(pwdConfirmar), gbc);
+        fila++;
+
+        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 2;
+        JLabel lblRequisitos = new JLabel("<html>" + TemaUI.REQUISITOS_PASSWORD + "</html>");
+        lblRequisitos.setFont(lblRequisitos.getFont().deriveFont(Font.PLAIN, 10f));
+        lblRequisitos.setForeground(TemaUI.TEXTO_SUAVE);
+        ventana.add(lblRequisitos, gbc);
+        fila++;
+
+        JLabel lblEstado = new JLabel(" ");
+        lblEstado.setFont(lblEstado.getFont().deriveFont(11f));
+        gbc.gridx = 0; gbc.gridy = fila;
+        ventana.add(lblEstado, gbc);
+        fila++;
+
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        JButton btnCancelar = new JButton("Cancelar");
+        JButton btnGuardar = TemaUI.crearBotonPrimario("Guardar");
+        panelBotones.add(btnCancelar);
+        panelBotones.add(btnGuardar);
+        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 2;
+        ventana.add(panelBotones, gbc);
+
+        btnCancelar.addActionListener(e -> ventana.dispose());
+
+        btnGuardar.addActionListener(e -> {
+            String actual = new String(pwdActual.getPassword());
+            String nueva = new String(pwdNueva.getPassword());
+            String confirmar = new String(pwdConfirmar.getPassword());
+
+            if (actual.isEmpty() || nueva.isEmpty() || confirmar.isEmpty()) {
+                lblEstado.setForeground(Color.RED);
+                lblEstado.setText("Completa todos los campos.");
+                return;
+            }
+            if (!nueva.equals(confirmar)) {
+                lblEstado.setForeground(Color.RED);
+                lblEstado.setText("La nueva contraseña y su confirmación no coinciden.");
+                return;
+            }
+            if (!TemaUI.PATRON_PASSWORD_SEGURA.matcher(nueva).matches()) {
+                lblEstado.setForeground(Color.RED);
+                lblEstado.setText("La nueva contraseña no cumple los requisitos mínimos.");
+                return;
+            }
+
+            try {
+                boolean exito = GestorArchivosBinarios.cambiarPassword(
+                        usuarioActual.getUsername(), actual, nueva);
+                if (exito) {
+                    usuarioActual.setPassword(nueva);
+                    lblEstado.setForeground(new Color(16, 120, 60));
+                    lblEstado.setText("Contraseña actualizada exitosamente.");
+                    pwdActual.setText("");
+                    pwdNueva.setText("");
+                    pwdConfirmar.setText("");
+                } else {
+                    lblEstado.setForeground(Color.RED);
+                    lblEstado.setText("La contraseña actual es incorrecta.");
+                }
+            } catch (Exception ex) {
+                lblEstado.setForeground(Color.RED);
+                lblEstado.setText("Error de archivo: " + ex.getMessage());
+            }
+        });
+
+        mostrarVentanaInterna("cambiarPassword", ventana);
+    }
+
     private void cerrarSesion() {
         int confirmar = JOptionPane.showConfirmDialog(this,
                 "¿Cerrar la sesión actual?", "Cerrar sesión", JOptionPane.YES_NO_OPTION);
@@ -200,7 +350,6 @@ public class EscritorioPrincipal extends JFrame {
             SwingUtilities.invokeLater(() -> new PantallaLogin().setVisible(true));
         }
     }
-
 
     private File obtenerRaizDeTrabajo() {
         if (usuarioActual.isAdministrador()) {
@@ -222,7 +371,6 @@ public class EscritorioPrincipal extends JFrame {
         }
         return new File(GestorArchivosBinarios.rutaCarpetaUsuario(usuarioActual.getUsername()));
     }
-
 
     private void abrirExplorador() {
         if (traerAlFrenteSiExiste("explorador")) return;
@@ -456,7 +604,6 @@ public class EscritorioPrincipal extends JFrame {
         hiloOrganizador.start();
     }
 
-
     private void abrirEditorTexto() {
         if (traerAlFrenteSiExiste("editor")) return;
 
@@ -533,28 +680,28 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private void abrirArchivoTexto(Component padre, JTextPane areaTexto) {
-    JFileChooser chooser = new JFileChooser(obtenerRaizDeTrabajo());
-    chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Texto (.txt)", "txt"));
-    if (chooser.showOpenDialog(padre) == JFileChooser.APPROVE_OPTION) {
-        File archivo = chooser.getSelectedFile();
-        try {
-            byte[] contenido = Files.readAllBytes(archivo.toPath());
-            String inicio = new String(contenido, 0, Math.min(contenido.length, 5), StandardCharsets.US_ASCII);
-            if (inicio.startsWith("{\\rtf")) {
-                areaTexto.setText("");
-                try (InputStream entrada = new ByteArrayInputStream(contenido)) {
-                    new RTFEditorKit().read(entrada, areaTexto.getDocument(), 0);
+        JFileChooser chooser = new JFileChooser(obtenerRaizDeTrabajo());
+        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Texto (.txt)", "txt"));
+        if (chooser.showOpenDialog(padre) == JFileChooser.APPROVE_OPTION) {
+            File archivo = chooser.getSelectedFile();
+            try {
+                byte[] contenido = Files.readAllBytes(archivo.toPath());
+                String inicio = new String(contenido, 0, Math.min(contenido.length, 5), StandardCharsets.US_ASCII);
+                if (inicio.startsWith("{\\rtf")) {
+                    areaTexto.setText("");
+                    try (InputStream entrada = new ByteArrayInputStream(contenido)) {
+                        new RTFEditorKit().read(entrada, areaTexto.getDocument(), 0);
+                    }
+                } else {
+                    areaTexto.setText(new String(contenido, StandardCharsets.UTF_8));
                 }
-            } else {
-                areaTexto.setText(new String(contenido, StandardCharsets.UTF_8));
+            } catch (IOException ex) {
+                JOptionPane.showMessageDialog(padre, "No se pudo abrir el archivo: " + ex.getMessage());
+            } catch (BadLocationException ex) {
+                JOptionPane.showMessageDialog(padre, "El formato del archivo no es válido.");
             }
-        } catch (IOException ex) {
-            JOptionPane.showMessageDialog(padre, "No se pudo abrir el archivo: " + ex.getMessage());
-        } catch (BadLocationException ex) {
-            JOptionPane.showMessageDialog(padre, "El formato del archivo no es válido.");
         }
     }
-}
 
     private void guardarArchivoTexto(Component padre, JTextPane areaTexto) {
         JFileChooser chooser = new JFileChooser(obtenerRaizDeTrabajo());
@@ -574,7 +721,6 @@ public class EscritorioPrincipal extends JFrame {
             }
         }
     }
-
 
     private void abrirVisorImagenes() {
         if (traerAlFrenteSiExiste("visor")) return;
@@ -644,9 +790,6 @@ public class EscritorioPrincipal extends JFrame {
         lblImagen.setIcon(new ImageIcon(escalada));
         lblImagen.setText(null);
     }
-
-
-    // CONSOLA DE COMANDOS 
 
     private void abrirConsola() {
         if (traerAlFrenteSiExiste("consola")) return;
@@ -743,9 +886,6 @@ public class EscritorioPrincipal extends JFrame {
                 && new File(nombre).getName().equals(nombre);
     }
 
-
-    // REPRODUCTOR DE MÚSICA (pendiente)
-
     private void abrirReproductor() {
         if (traerAlFrenteSiExiste("reproductor")) return;
 
@@ -772,9 +912,6 @@ public class EscritorioPrincipal extends JFrame {
         mostrarVentanaInterna("reproductor", ventana);
     }
 
-
-    // INSTA+ (pendiente)
-
     private void abrirInstaPlus() {
         if (traerAlFrenteSiExiste("instaplus")) return;
 
@@ -793,7 +930,6 @@ public class EscritorioPrincipal extends JFrame {
         mostrarVentanaInterna("instaplus", ventana);
     }
 
-   
     private void abrirAdministrarUsuarios() {
         if (traerAlFrenteSiExiste("administrar")) return;
 
@@ -866,8 +1002,6 @@ public class EscritorioPrincipal extends JFrame {
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
     }
-
-    
 
     private boolean traerAlFrenteSiExiste(String clave) {
         JInternalFrame existente = ventanasAbiertas.get(clave);

@@ -6,6 +6,7 @@ import java.awt.*;
 import java.awt.event.ActionListener;
 import java.awt.geom.Ellipse2D;
 import java.io.File;
+import java.util.regex.Pattern;
 
 
 public final class TemaUI {
@@ -36,6 +37,12 @@ public final class TemaUI {
     public static Color colorApp(int indice) {
         return COLORES_APP[Math.floorMod(indice, COLORES_APP.length)];
     }
+
+   
+    public static final Pattern PATRON_PASSWORD_SEGURA =
+            Pattern.compile("^(?=.*[A-Z])(?=.*[^A-Za-z0-9]).{8,}$");
+    public static final String REQUISITOS_PASSWORD =
+            "Mínimo 8 caracteres, con al menos 1 mayúscula y 1 carácter especial (@, #, $, %, !, etc.)";
 
 
     public static void aplicar() {
@@ -142,6 +149,37 @@ public final class TemaUI {
         JButton boton = crearBotonApp(nombre, iniciales, color);
         boton.addActionListener(accion);
         return boton;
+    }
+
+    
+    public static JPanel crearCampoPassword(JPasswordField campo) {
+        JPanel panel = new JPanel(new BorderLayout(4, 0));
+        panel.setOpaque(false);
+
+        char echoOriginal = campo.getEchoChar() != 0 ? campo.getEchoChar() : '•';
+        campo.setEchoChar(echoOriginal);
+
+        JButton btnToggle = new JButton("Ver");
+        btnToggle.setFocusable(false);
+        btnToggle.setMargin(new Insets(2, 8, 2, 8));
+        btnToggle.setFont(btnToggle.getFont().deriveFont(11f));
+        btnToggle.setToolTipText("Mostrar contraseña");
+        btnToggle.addActionListener(e -> {
+            boolean oculta = campo.getEchoChar() != 0;
+            if (oculta) {
+                campo.setEchoChar((char) 0);
+                btnToggle.setText("Ocultar");
+                btnToggle.setToolTipText("Ocultar contraseña");
+            } else {
+                campo.setEchoChar(echoOriginal);
+                btnToggle.setText("Ver");
+                btnToggle.setToolTipText("Mostrar contraseña");
+            }
+        });
+
+        panel.add(campo, BorderLayout.CENTER);
+        panel.add(btnToggle, BorderLayout.EAST);
+        return panel;
     }
 
     public static JButton crearBotonPrimario(String texto) {
