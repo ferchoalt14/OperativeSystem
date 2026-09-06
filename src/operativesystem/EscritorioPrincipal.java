@@ -107,17 +107,33 @@ public class EscritorioPrincipal extends JFrame {
         btnAvatarSuperior.setBorderPainted(false);
         btnAvatarSuperior.setFocusPainted(false);
         btnAvatarSuperior.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnAvatarSuperior.setToolTipText(usuarioActual.getUsername());
-        btnAvatarSuperior.addActionListener(e -> mostrarMenuPerfil(btnAvatarSuperior));
+        btnAvatarSuperior.setToolTipText("Ver mi perfil");
+        btnAvatarSuperior.addActionListener(e -> abrirPerfil());
 
         JLabel lblNombre = new JLabel(usuarioActual.getUsername()
                 + (usuarioActual.isAdministrador() ? "  ·  Admin" : "") + "  ");
         lblNombre.setForeground(TemaUI.TEXTO_SUAVE);
 
+        JButton btnMiPerfil = new JButton("Mi perfil");
+        btnMiPerfil.setContentAreaFilled(false);
+        btnMiPerfil.setFocusPainted(false);
+        btnMiPerfil.setForeground(TemaUI.ACCENT_OSCURO);
+        btnMiPerfil.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnMiPerfil.addActionListener(e -> abrirPerfil());
+
+        JButton btnCerrarSesion = new JButton("Cerrar sesión");
+        btnCerrarSesion.setContentAreaFilled(false);
+        btnCerrarSesion.setFocusPainted(false);
+        btnCerrarSesion.setForeground(new Color(190, 40, 40));
+        btnCerrarSesion.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnCerrarSesion.addActionListener(e -> cerrarSesion());
+
         JPanel panelDerecho = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         panelDerecho.setOpaque(false);
         panelDerecho.add(lblNombre);
         panelDerecho.add(btnAvatarSuperior);
+        panelDerecho.add(btnMiPerfil);
+        panelDerecho.add(btnCerrarSesion);
         barra.add(panelDerecho, BorderLayout.EAST);
 
         return barra;
@@ -133,18 +149,6 @@ public class EscritorioPrincipal extends JFrame {
         String nombre = usuarioActual.getNombreCompleto();
         String iniciales = (nombre == null || nombre.isBlank()) ? "?" : nombre.substring(0, 1).toUpperCase();
         return TemaUI.crearIconoCircular(iniciales, TemaUI.ACCENT, diametro);
-    }
-
-    private void mostrarMenuPerfil(Component invocador) {
-        JPopupMenu menu = new JPopupMenu();
-        JMenuItem itemPerfil = new JMenuItem("Ver perfil");
-        itemPerfil.addActionListener(e -> abrirPerfil());
-        JMenuItem itemCerrar = new JMenuItem("Cerrar sesión");
-        itemCerrar.addActionListener(e -> cerrarSesion());
-        menu.add(itemPerfil);
-        menu.addSeparator();
-        menu.add(itemCerrar);
-        menu.show(invocador, 0, invocador.getHeight());
     }
 
     private void abrirPerfil() {
@@ -916,17 +920,16 @@ public class EscritorioPrincipal extends JFrame {
         if (traerAlFrenteSiExiste("instaplus")) return;
 
         JInternalFrame ventana = new JInternalFrame("INSTA+", true, true, true, true);
-        ventana.setSize(420, 320);
+        ventana.setSize(480, 560);
         ventana.setLayout(new BorderLayout());
 
-        JLabel lblInfo = new JLabel(
-                "<html><center>Módulo INSTA+ pendiente de implementación.<br><br>" +
-                        "Debe integrarse en una sola vista con: Perfil, Cargar<br>" +
-                        "imágenes, Timeline, Interacciones, Buscar Profile,<br>" +
-                        "Buscar Hashtag, Inbox, Editar perfil y Cerrar sesión.</center></html>",
-                SwingConstants.CENTER);
+        // PantallaInstaPlus contiene su propio CardLayout con Login/Registro
+        // (y, tras iniciar sesión, una pantalla de bienvenida simple).
+        // Usa GestorArchivosBinarios para autenticar/registrar, reutilizando
+        // el mismo login de Mini-Windows.
+        PantallaInstaPlus panelInstaPlus = new PantallaInstaPlus();
+        ventana.add(panelInstaPlus, BorderLayout.CENTER);
 
-        ventana.add(lblInfo, BorderLayout.CENTER);
         mostrarVentanaInterna("instaplus", ventana);
     }
 
