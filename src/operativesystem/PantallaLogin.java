@@ -23,6 +23,7 @@ public class PantallaLogin extends JFrame {
     private JSpinner spnRegEdad;
     private JLabel lblRegFoto;
     private String rutaFotoSeleccionada = null;
+    private JComboBox<String> cmbRegRol;
 
     public PantallaLogin() {
         super("Mini-Windows - Inicio de sesión");
@@ -187,6 +188,13 @@ public class PantallaLogin extends JFrame {
         fila++;
 
         gbc.gridy = fila; gbc.gridx = 0;
+        panel.add(new JLabel("Tipo de cuenta:"), gbc);
+        gbc.gridx = 1;
+        cmbRegRol = new JComboBox<>(new String[]{"Estándar", "Administrador"});
+        panel.add(cmbRegRol, gbc);
+        fila++;
+
+        gbc.gridy = fila; gbc.gridx = 0;
         panel.add(new JLabel("Edad:"), gbc);
         gbc.gridx = 1;
         spnRegEdad = new JSpinner(new SpinnerNumberModel(18, 1, 120, 1));
@@ -254,8 +262,11 @@ public class PantallaLogin extends JFrame {
             return;
         }
 
+        String rolSeleccionado = "Administrador".equals(cmbRegRol.getSelectedItem())
+                ? "ADMINISTRADOR" : "ESTANDAR";
+
         Usuario nuevo = new Usuario(nombre, genero, username, password, edad,
-                rutaFotoSeleccionada, false);
+                rutaFotoSeleccionada, false, rolSeleccionado);
 
         try {
             GestorArchivosBinarios.registrarUsuario(nuevo);
@@ -283,5 +294,6 @@ public class PantallaLogin extends JFrame {
         cmbRegGenero.setSelectedIndex(0);
         lblRegFoto.setText("(ninguna seleccionada)");
         rutaFotoSeleccionada = null;
+        cmbRegRol.setSelectedIndex(0);
     }
 }

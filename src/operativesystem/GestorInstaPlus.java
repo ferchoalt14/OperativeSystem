@@ -7,7 +7,7 @@ import java.util.List;
 
 public class GestorInstaPlus {
 
-    private static final String RUTA_INSTA_RAIZ = "Z:/INSTA_RAIZ/";
+    private static final String RUTA_INSTA_RAIZ = System.getProperty("user.home") + "/MiniWindowsData/INSTA_RAIZ/";
     private static final String RUTA_INSTA_USERS = RUTA_INSTA_RAIZ + "users_insta.ins";
 
     private static void asegurarRaiz() {

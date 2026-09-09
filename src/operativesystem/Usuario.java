@@ -16,9 +16,10 @@ public class Usuario implements Serializable {
     private boolean activa;
     private String rutaFoto;
     private String rutaWallpaper;
+    private String rol;
 
     // Constructor completo usado por PantallaLogin
-    public Usuario(String nombreCompleto, char genero, String username, String password, int edad, String rutaFoto, boolean activa) {
+    public Usuario(String nombreCompleto, char genero, String username, String password, int edad, String rutaFoto, boolean activa, String rol) {
         this.nombreCompleto = nombreCompleto;
         this.genero = genero;
         this.username = username;
@@ -28,11 +29,17 @@ public class Usuario implements Serializable {
         this.activa = activa; 
         this.rutaFoto = rutaFoto != null ? rutaFoto : "";
         this.rutaWallpaper = ""; 
+        this.rol = (rol != null && !rol.isEmpty()) ? rol : "ESTANDAR";
+    }
+
+    // Overload de compatibilidad (rol por defecto: ESTANDAR)
+    public Usuario(String nombreCompleto, char genero, String username, String password, int edad, String rutaFoto, boolean activa) {
+        this(nombreCompleto, genero, username, password, edad, rutaFoto, activa, "ESTANDAR");
     }
 
     // Constructor básico usado por defecto
     public Usuario(String nombreCompleto, char genero, String username, String password, int edad) {
-        this(nombreCompleto, genero, username, password, edad, "", true);
+        this(nombreCompleto, genero, username, password, edad, "", true, "ESTANDAR");
     }
 
     public String getNombreCompleto() { return nombreCompleto; }
@@ -64,8 +71,11 @@ public class Usuario implements Serializable {
     public String getRutaWallpaper() { return rutaWallpaper; }
     public void setRutaWallpaper(String rutaWallpaper) { this.rutaWallpaper = rutaWallpaper; }
     
+    public String getRol() { return rol; }
+    public void setRol(String rol) { this.rol = rol; }
+
     public boolean isAdministrador() {
-        return "admin".equalsIgnoreCase(this.username);
+        return "ADMINISTRADOR".equalsIgnoreCase(this.rol) || "admin".equalsIgnoreCase(this.username);
     }
     
     public String getFechaRegistroTexto() {

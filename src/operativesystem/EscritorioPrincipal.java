@@ -356,23 +356,6 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private File obtenerRaizDeTrabajo() {
-        if (usuarioActual.isAdministrador()) {
-            try {
-                List<Usuario> todos = GestorArchivosBinarios.cargarUsuarios();
-                String[] usernames = todos.stream().map(Usuario::getUsername).toArray(String[]::new);
-                String elegido = (String) JOptionPane.showInputDialog(this,
-                        "¿Qué carpeta de usuario deseas explorar?",
-                        "Selección de usuario (modo administrador)",
-                        JOptionPane.QUESTION_MESSAGE, null, usernames, usuarioActual.getUsername());
-                if (elegido == null) {
-                    elegido = usuarioActual.getUsername();
-                }
-                return new File(GestorArchivosBinarios.rutaCarpetaUsuario(elegido));
-            } catch (ArchivoCorruptoException ex) {
-                JOptionPane.showMessageDialog(this, "No se pudo leer la lista de usuarios.",
-                        "Error", JOptionPane.ERROR_MESSAGE);
-            }
-        }
         return new File(GestorArchivosBinarios.rutaCarpetaUsuario(usuarioActual.getUsername()));
     }
 
@@ -389,6 +372,7 @@ public class EscritorioPrincipal extends JFrame {
         DefaultMutableTreeNode nodoRaiz = construirNodo(raiz, Comparator.comparing(File::getName, String.CASE_INSENSITIVE_ORDER));
         JTree arbol = new JTree(nodoRaiz);
         arbol.setRootVisible(true);
+        arbol.expandPath(new TreePath(nodoRaiz));
         JScrollPane scroll = new JScrollPane(arbol);
 
         JPanel panelBotones = new JPanel();
@@ -505,6 +489,38 @@ public class EscritorioPrincipal extends JFrame {
             return;
         }
         actualizarArbol(arbol, raiz, "Nombre");
+        expandirYSeleccionar(arbol, nuevaCarpeta);
+    }
+
+    /**
+     * Busca el nodo correspondiente al archivo/carpeta dado dentro del árbol,
+     * expande la ruta hasta él y lo deja seleccionado y visible. Sin esto,
+     * setModel() en actualizarArbol() colapsa el árbol y la carpeta recién
+     * creada "desaparece" visualmente aunque sí se haya creado en disco.
+     */
+    private void expandirYSeleccionar(JTree arbol, File objetivo) {
+        DefaultMutableTreeNode raizNodo = (DefaultMutableTreeNode) arbol.getModel().getRoot();
+        DefaultMutableTreeNode encontrado = buscarNodoPorArchivo(raizNodo, objetivo);
+        if (encontrado != null) {
+            TreePath ruta = new TreePath(encontrado.getPath());
+            arbol.expandPath(ruta.getParentPath() != null ? ruta.getParentPath() : ruta);
+            arbol.setSelectionPath(ruta);
+            arbol.scrollPathToVisible(ruta);
+        } else {
+            arbol.expandPath(new TreePath(raizNodo));
+        }
+    }
+
+    private DefaultMutableTreeNode buscarNodoPorArchivo(DefaultMutableTreeNode nodo, File objetivo) {
+        Object userObj = nodo.getUserObject();
+        if (userObj instanceof File && ((File) userObj).equals(objetivo)) {
+            return nodo;
+        }
+        for (int i = 0; i < nodo.getChildCount(); i++) {
+            DefaultMutableTreeNode resultado = buscarNodoPorArchivo((DefaultMutableTreeNode) nodo.getChildAt(i), objetivo);
+            if (resultado != null) return resultado;
+        }
+        return null;
     }
 
     private void renombrarArchivo(JTree arbol, JInternalFrame ventana, File raiz) {
@@ -546,6 +562,7 @@ public class EscritorioPrincipal extends JFrame {
         try {
             copiarRecursivamente(archivoCopiado, destino);
             actualizarArbol(arbol, raiz, "Nombre");
+            expandirYSeleccionar(arbol, destino);
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(ventana, "No se pudo pegar: " + ex.getMessage(), "Explorador", JOptionPane.ERROR_MESSAGE);
         }
@@ -744,15 +761,11 @@ public class EscritorioPrincipal extends JFrame {
         JButton btnSiguiente = new JButton("Siguiente");
 
         btnCarpeta.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser(obtenerRaizDeTrabajo());
+            JFileChooser chooser = new JFileChooser(System.getProperty("user.home"));
             chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
             if (chooser.showOpenDialog(ventana) == JFileChooser.APPROVE_OPTION) {
                 imagenes.clear();
-                File[] archivos = chooser.getSelectedFile().listFiles((dir, nombre) -> {
-                    String n = nombre.toLowerCase();
-                    return n.endsWith(".png") || n.endsWith(".jpg") || n.endsWith(".jpeg");
-                });
-                if (archivos != null) imagenes.addAll(Arrays.asList(archivos));
+                buscarImagenesRecursivo(chooser.getSelectedFile(), imagenes);
                 indiceActual[0] = imagenes.isEmpty() ? -1 : 0;
                 mostrarImagenActual(lblImagen, imagenes, indiceActual[0]);
             }
@@ -783,6 +796,28 @@ public class EscritorioPrincipal extends JFrame {
         mostrarVentanaInterna("visor", ventana);
     }
 
+    /**
+     * Busca archivos .png/.jpg/.jpeg dentro de la carpeta dada, incluyendo
+     * sus subcarpetas. Antes solo se miraba el primer nivel, por lo que si
+     * las fotos estaban en una subcarpeta (típico en Windows: "Imágenes >
+     * Cámara", "Imágenes > 2024", carpetas de OneDrive, etc.) el visor
+     * reportaba "No hay imágenes" aunque sí existieran.
+     */
+    private void buscarImagenesRecursivo(File carpeta, List<File> destino) {
+        File[] archivos = carpeta.listFiles();
+        if (archivos == null) return; // sin permiso de lectura o no es carpeta
+        for (File f : archivos) {
+            if (f.isDirectory()) {
+                buscarImagenesRecursivo(f, destino);
+            } else {
+                String n = f.getName().toLowerCase();
+                if (n.endsWith(".png") || n.endsWith(".jpg") || n.endsWith(".jpeg")) {
+                    destino.add(f);
+                }
+            }
+        }
+    }
+
     private void mostrarImagenActual(JLabel lblImagen, List<File> imagenes, int indice) {
         if (indice < 0 || indice >= imagenes.size()) {
             lblImagen.setIcon(null);
@@ -811,12 +846,13 @@ public class EscritorioPrincipal extends JFrame {
         File[] carpetaActual = {raizPermitida};
 
         JTextField campoComando = new JTextField();
+        areaSalida.append("Mini-Windows CMD. Escribe 'help' para ver los comandos disponibles.\n");
         areaSalida.append(carpetaActual[0].getAbsolutePath() + ">\n");
 
         campoComando.addActionListener((ActionEvent e) -> {
             String comando = campoComando.getText().trim();
             areaSalida.append(carpetaActual[0].getAbsolutePath() + "> " + comando + "\n");
-            String resultado = procesarComandoConsola(comando, carpetaActual, raizPermitida);
+            String resultado = procesarComandoConsola(comando, carpetaActual, raizPermitida, areaSalida);
             if (resultado != null) areaSalida.append(resultado + "\n");
             campoComando.setText("");
             areaSalida.setCaretPosition(areaSalida.getDocument().getLength());
@@ -824,11 +860,18 @@ public class EscritorioPrincipal extends JFrame {
 
         ventana.add(scroll, BorderLayout.CENTER);
         ventana.add(campoComando, BorderLayout.SOUTH);
+        ventana.addInternalFrameListener(new javax.swing.event.InternalFrameAdapter() {
+            @Override
+            public void internalFrameActivated(javax.swing.event.InternalFrameEvent e) {
+                campoComando.requestFocusInWindow();
+            }
+        });
 
         mostrarVentanaInterna("consola", ventana);
+        SwingUtilities.invokeLater(campoComando::requestFocusInWindow);
     }
 
-    private String procesarComandoConsola(String comando, File[] carpetaActual, File raizPermitida) {
+    private String procesarComandoConsola(String comando, File[] carpetaActual, File raizPermitida, JTextArea areaSalidaConsola) {
         if (comando.isEmpty()) return null;
 
         String[] partes = comando.split("\\s+", 2);
@@ -836,6 +879,29 @@ public class EscritorioPrincipal extends JFrame {
         String argumento = partes.length > 1 ? partes[1] : "";
 
         switch (instruccion) {
+            case "help":
+            case "ayuda":
+                return "Comandos disponibles:\n"
+                        + "  help                  Muestra esta ayuda\n"
+                        + "  mkdir <nombre>        Crea una carpeta\n"
+                        + "  rmdir <nombre>        Elimina una carpeta vacía\n"
+                        + "  del <archivo>         Elimina un archivo\n"
+                        + "  ren <viejo> <nuevo>    Renombra un archivo o carpeta\n"
+                        + "  copy <origen> <dest>  Copia un archivo\n"
+                        + "  cd <carpeta>          Entra a una carpeta\n"
+                        + "  cd..                  Sube a la carpeta anterior\n"
+                        + "  dir                   Lista el contenido de la carpeta actual\n"
+                        + "  cls                   Limpia la pantalla\n"
+                        + "  echo <texto>          Muestra un texto\n"
+                        + "  whoami                Muestra el usuario actual\n"
+                        + "  date                  Muestra la fecha\n"
+                        + "  time                  Muestra la hora\n"
+                        + "  ver                   Muestra la versión del sistema";
+
+            case "cls":
+                areaSalidaConsola.setText("");
+                return null;
+
             case "mkdir":
                 if (argumento.isEmpty()) return "Uso: mkdir <nombre>";
                 if (!esNombreSeguro(argumento)) return "Nombre de carpeta no válido.";
@@ -843,13 +909,66 @@ public class EscritorioPrincipal extends JFrame {
                 return creado ? "Carpeta creada." : "No se pudo crear la carpeta.";
 
             case "rm":
-                if (argumento.isEmpty()) return "Uso: rm <nombre>";
+            case "rmdir":
+                if (argumento.isEmpty()) return "Uso: " + instruccion + " <nombre>";
                 File aEliminar = new File(carpetaActual[0], argumento);
                 if (!esNombreSeguro(argumento) || !estaDentroDeRaiz(aEliminar, raizPermitida)) {
                     return "No puedes eliminar fuera de tu carpeta de usuario.";
                 }
                 boolean eliminado = aEliminar.isDirectory() && aEliminar.delete();
-                return eliminado ? "Eliminado." : "No se pudo eliminar (¿existe y está vacío?).";
+                return eliminado ? "Eliminado." : "No se pudo eliminar (¿existe, es una carpeta y está vacía?).";
+
+            case "del":
+                if (argumento.isEmpty()) return "Uso: del <archivo>";
+                File archivoAEliminar = new File(carpetaActual[0], argumento);
+                if (!esNombreSeguro(argumento) || !estaDentroDeRaiz(archivoAEliminar, raizPermitida)) {
+                    return "No puedes eliminar fuera de tu carpeta de usuario.";
+                }
+                boolean archivoEliminado = archivoAEliminar.isFile() && archivoAEliminar.delete();
+                return archivoEliminado ? "Archivo eliminado." : "No se pudo eliminar (¿existe y es un archivo?).";
+
+            case "ren":
+                String[] argsRen = argumento.split("\\s+", 2);
+                if (argsRen.length < 2 || argsRen[0].isEmpty() || argsRen[1].isEmpty()) {
+                    return "Uso: ren <nombre actual> <nombre nuevo>";
+                }
+                if (!esNombreSeguro(argsRen[0]) || !esNombreSeguro(argsRen[1])) {
+                    return "Nombre no válido.";
+                }
+                File origenRen = new File(carpetaActual[0], argsRen[0]);
+                File destinoRen = new File(carpetaActual[0], argsRen[1]);
+                if (!origenRen.exists()) return "No existe: " + argsRen[0];
+                if (destinoRen.exists()) return "Ya existe un archivo o carpeta con ese nombre.";
+                return origenRen.renameTo(destinoRen) ? "Renombrado." : "No se pudo renombrar.";
+
+            case "copy":
+                String[] argsCopy = argumento.split("\\s+", 2);
+                if (argsCopy.length < 2 || argsCopy[0].isEmpty() || argsCopy[1].isEmpty()) {
+                    return "Uso: copy <origen> <destino>";
+                }
+                if (!esNombreSeguro(argsCopy[0]) || !esNombreSeguro(argsCopy[1])) {
+                    return "Nombre no válido.";
+                }
+                File origenCopy = new File(carpetaActual[0], argsCopy[0]);
+                File destinoCopy = new File(carpetaActual[0], argsCopy[1]);
+                if (!origenCopy.isFile()) return "El origen no existe o no es un archivo.";
+                if (destinoCopy.exists()) return "Ya existe un archivo con ese nombre.";
+                try {
+                    java.nio.file.Files.copy(origenCopy.toPath(), destinoCopy.toPath());
+                    return "Copiado.";
+                } catch (IOException ex) {
+                    return "No se pudo copiar: " + ex.getMessage();
+                }
+
+            case "echo":
+                return argumento;
+
+            case "whoami":
+                return usuarioActual.getUsername()
+                        + (usuarioActual.isAdministrador() ? " (administrador)" : " (estándar)");
+
+            case "ver":
+                return "Mini-Windows [Versión 1.0]";
 
             case "cd":
                 if (argumento.isEmpty()) return "Uso: cd <carpeta>";
@@ -881,7 +1000,7 @@ public class EscritorioPrincipal extends JFrame {
                 return new SimpleDateFormat("HH:mm:ss").format(new Date());
 
             default:
-                return "Comando no reconocido: " + instruccion;
+                return "Comando no reconocido: " + instruccion + " (escribe 'help' para ver los comandos disponibles)";
         }
     }
 

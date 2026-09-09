@@ -6,8 +6,8 @@ import java.util.List;
 
 public class GestorArchivosBinarios {
     
-    private static final String RUTA_USERS = "Z:/users.ins";
-    private static final String RUTA_RAIZ = "Z:/";
+    private static final String RUTA_RAIZ = System.getProperty("user.home") + "/MiniWindowsData/";
+    private static final String RUTA_USERS = RUTA_RAIZ + "users.ins";
 
     public static void inicializarSistema() {
         File raiz = new File(RUTA_RAIZ);
