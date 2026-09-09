@@ -12,6 +12,7 @@ import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.List;
+import java.nio.file.StandardCopyOption;
 
 public class EscritorioPrincipal extends JFrame {
 
@@ -20,20 +21,20 @@ public class EscritorioPrincipal extends JFrame {
     private JPanel panelIconos;
     private JButton btnAvatarSuperior;
     private File archivoCopiado;
+    private boolean esCortar = false;
     private final Map<String, JInternalFrame> ventanasAbiertas = new HashMap<>();
 
     public EscritorioPrincipal(Usuario usuario) {
-        super("Mini-Windows - " + usuario.getUsername() +
-                (usuario.isAdministrador() ? "  [ADMINISTRADOR]" : ""));
+        super("Mini-Windows - " + usuario.getUsername()
+                + (usuario.isAdministrador() ? "  [ADMINISTRADOR]" : ""));
         this.usuarioActual = usuario;
 
-       
         this.escritorio = new JDesktopPane() {
             @Override
             protected void paintComponent(Graphics g) {
                 super.paintComponent(g);
                 Graphics2D g2 = (Graphics2D) g.create();
-                
+
                 if (usuarioActual.getRutaWallpaper() != null && !usuarioActual.getRutaWallpaper().isEmpty()) {
                     File imgFile = new File(usuarioActual.getRutaWallpaper());
                     if (imgFile.exists()) {
@@ -152,7 +153,9 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private void abrirPerfil() {
-        if (traerAlFrenteSiExiste("perfil")) return;
+        if (traerAlFrenteSiExiste("perfil")) {
+            return;
+        }
 
         JInternalFrame ventana = new JInternalFrame("Mi perfil", true, true, true, true);
         ventana.setSize(340, 520);
@@ -174,7 +177,7 @@ public class EscritorioPrincipal extends JFrame {
                 usuarioActual.isAdministrador() ? "Administrador" : "Estándar"));
 
         JPanel panelBotonesPerfil = new JPanel(new GridLayout(3, 1, 5, 5));
-        
+
         JButton btnCambiarFoto = new JButton("Cambiar foto de perfil");
         btnCambiarFoto.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser();
@@ -191,7 +194,7 @@ public class EscritorioPrincipal extends JFrame {
                 }
             }
         });
-        
+
         JButton btnCambiarFondo = new JButton("Cambiar fondo de escritorio");
         btnCambiarFondo.addActionListener(e -> {
             JFileChooser chooser = new JFileChooser();
@@ -201,7 +204,7 @@ public class EscritorioPrincipal extends JFrame {
                 usuarioActual.setRutaWallpaper(chooser.getSelectedFile().getAbsolutePath());
                 try {
                     GestorArchivosBinarios.actualizarUsuario(usuarioActual);
-                    escritorio.repaint(); 
+                    escritorio.repaint();
                 } catch (Exception ex) {
                     JOptionPane.showMessageDialog(ventana, "Error guardando fondo: " + ex.getMessage());
                 }
@@ -236,7 +239,9 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private void abrirCambiarPassword() {
-        if (traerAlFrenteSiExiste("cambiarPassword")) return;
+        if (traerAlFrenteSiExiste("cambiarPassword")) {
+            return;
+        }
 
         JInternalFrame ventana = new JInternalFrame("Cambiar contraseña", true, true, false, true);
         ventana.setSize(360, 300);
@@ -253,7 +258,9 @@ public class EscritorioPrincipal extends JFrame {
 
         int fila = 0;
 
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 2;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 2;
         JLabel lblTitulo = new JLabel("Cambiar contraseña");
         lblTitulo.setFont(lblTitulo.getFont().deriveFont(Font.BOLD, 15f));
         lblTitulo.setForeground(TemaUI.ACCENT_OSCURO);
@@ -261,25 +268,30 @@ public class EscritorioPrincipal extends JFrame {
         gbc.gridwidth = 1;
         fila++;
 
-        gbc.gridx = 0; gbc.gridy = fila;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
         ventana.add(new JLabel("Contraseña actual:"), gbc);
         gbc.gridx = 1;
         ventana.add(TemaUI.crearCampoPassword(pwdActual), gbc);
         fila++;
 
-        gbc.gridx = 0; gbc.gridy = fila;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
         ventana.add(new JLabel("Nueva contraseña:"), gbc);
         gbc.gridx = 1;
         ventana.add(TemaUI.crearCampoPassword(pwdNueva), gbc);
         fila++;
 
-        gbc.gridx = 0; gbc.gridy = fila;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
         ventana.add(new JLabel("Confirmar nueva:"), gbc);
         gbc.gridx = 1;
         ventana.add(TemaUI.crearCampoPassword(pwdConfirmar), gbc);
         fila++;
 
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 2;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 2;
         JLabel lblRequisitos = new JLabel("<html>" + TemaUI.REQUISITOS_PASSWORD + "</html>");
         lblRequisitos.setFont(lblRequisitos.getFont().deriveFont(Font.PLAIN, 10f));
         lblRequisitos.setForeground(TemaUI.TEXTO_SUAVE);
@@ -288,7 +300,8 @@ public class EscritorioPrincipal extends JFrame {
 
         JLabel lblEstado = new JLabel(" ");
         lblEstado.setFont(lblEstado.getFont().deriveFont(11f));
-        gbc.gridx = 0; gbc.gridy = fila;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
         ventana.add(lblEstado, gbc);
         fila++;
 
@@ -297,7 +310,9 @@ public class EscritorioPrincipal extends JFrame {
         JButton btnGuardar = TemaUI.crearBotonPrimario("Guardar");
         panelBotones.add(btnCancelar);
         panelBotones.add(btnGuardar);
-        gbc.gridx = 0; gbc.gridy = fila; gbc.gridwidth = 2;
+        gbc.gridx = 0;
+        gbc.gridy = fila;
+        gbc.gridwidth = 2;
         ventana.add(panelBotones, gbc);
 
         btnCancelar.addActionListener(e -> ventana.dispose());
@@ -360,10 +375,14 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private void abrirExplorador() {
-        if (traerAlFrenteSiExiste("explorador")) return;
+        if (traerAlFrenteSiExiste("explorador")) {
+            return;
+        }
 
         File raiz = obtenerRaizDeTrabajo();
-        if (!raiz.exists()) raiz.mkdirs();
+        if (!raiz.exists()) {
+            raiz.mkdirs();
+        }
 
         JInternalFrame ventana = new JInternalFrame(
                 "Explorador - " + raiz.getName(), true, true, true, true);
@@ -376,26 +395,27 @@ public class EscritorioPrincipal extends JFrame {
         JScrollPane scroll = new JScrollPane(arbol);
 
         JPanel panelBotones = new JPanel();
-        JButton btnOrganizar = new JButton("Organizar carpeta seleccionada");
-        btnOrganizar.addActionListener(e -> {
-            File seleccion = obtenerArchivoSeleccionado(arbol);
-            if (seleccion == null || !seleccion.isDirectory()) {
-                JOptionPane.showMessageDialog(ventana, "Selecciona una carpeta para organizar.");
-                return;
-            }
-            organizarCarpetaSeleccionada(arbol, ventana, raiz, seleccion);
+        JButton btnCortar = new JButton("Cortar");
+        btnCortar.addActionListener(e -> {
+            cortarArchivo(arbol, ventana);
         });
+
         JButton btnCrear = new JButton("Nueva carpeta");
         btnCrear.addActionListener(e -> crearCarpeta(arbol, ventana, raiz));
+
         JButton btnRenombrar = new JButton("Renombrar");
         btnRenombrar.addActionListener(e -> renombrarArchivo(arbol, ventana, raiz));
+
         JButton btnCopiar = new JButton("Copiar");
         btnCopiar.addActionListener(e -> copiarArchivo(arbol, ventana));
+
         JButton btnPegar = new JButton("Pegar");
         btnPegar.addActionListener(e -> pegarArchivo(arbol, ventana, raiz));
+
         JComboBox<String> cmbOrden = new JComboBox<>(new String[]{"Nombre", "Fecha", "Tipo", "Tamaño"});
         cmbOrden.addActionListener(e -> actualizarArbol(arbol, raiz, (String) cmbOrden.getSelectedItem()));
-        panelBotones.add(btnOrganizar);
+
+        panelBotones.add(btnCortar);
         panelBotones.add(btnCrear);
         panelBotones.add(btnRenombrar);
         panelBotones.add(btnCopiar);
@@ -424,7 +444,9 @@ public class EscritorioPrincipal extends JFrame {
 
     private File obtenerArchivoSeleccionado(JTree arbol) {
         TreePath ruta = arbol.getSelectionPath();
-        if (ruta == null) return null;
+        if (ruta == null) {
+            return null;
+        }
         Object objeto = ((DefaultMutableTreeNode) ruta.getLastPathComponent()).getUserObject();
         return objeto instanceof File ? (File) objeto : null;
     }
@@ -468,7 +490,9 @@ public class EscritorioPrincipal extends JFrame {
     private String solicitarNombreSeguro(Component padre, String mensaje, String valorInicial) {
         String nombre = (String) JOptionPane.showInputDialog(padre, mensaje, "Explorador",
                 JOptionPane.QUESTION_MESSAGE, null, null, valorInicial);
-        if (nombre == null) return null;
+        if (nombre == null) {
+            return null;
+        }
         nombre = nombre.trim();
         if (nombre.isEmpty() || nombre.equals(".") || nombre.equals("..") || !new File(nombre).getName().equals(nombre)) {
             JOptionPane.showMessageDialog(padre, "Ingresa un nombre de archivo o carpeta válido.");
@@ -482,7 +506,9 @@ public class EscritorioPrincipal extends JFrame {
         File destino = seleccion != null && seleccion.isDirectory() ? seleccion
                 : (seleccion != null ? seleccion.getParentFile() : raiz);
         String nombre = solicitarNombreSeguro(ventana, "Nombre de la carpeta:", "");
-        if (nombre == null) return;
+        if (nombre == null) {
+            return;
+        }
         File nuevaCarpeta = new File(destino, nombre);
         if (!estaDentroDeRaiz(nuevaCarpeta, raiz) || !nuevaCarpeta.mkdir()) {
             JOptionPane.showMessageDialog(ventana, "No se pudo crear la carpeta. Verifica que no exista.", "Explorador", JOptionPane.ERROR_MESSAGE);
@@ -518,7 +544,9 @@ public class EscritorioPrincipal extends JFrame {
         }
         for (int i = 0; i < nodo.getChildCount(); i++) {
             DefaultMutableTreeNode resultado = buscarNodoPorArchivo((DefaultMutableTreeNode) nodo.getChildAt(i), objetivo);
-            if (resultado != null) return resultado;
+            if (resultado != null) {
+                return resultado;
+            }
         }
         return null;
     }
@@ -530,10 +558,14 @@ public class EscritorioPrincipal extends JFrame {
             return;
         }
         String nombre = solicitarNombreSeguro(ventana, "Nuevo nombre:", seleccion.getName());
-        if (nombre == null) return;
+        if (nombre == null) {
+            return;
+        }
         File destino = new File(seleccion.getParentFile(), nombre);
         try {
-            if (!estaDentroDeRaiz(destino, raiz) || destino.exists()) throw new IOException("El destino ya existe.");
+            if (!estaDentroDeRaiz(destino, raiz) || destino.exists()) {
+                throw new IOException("El destino ya existe.");
+            }
             Files.move(seleccion.toPath(), destino.toPath());
             actualizarArbol(arbol, raiz, "Nombre");
         } catch (IOException ex) {
@@ -548,6 +580,7 @@ public class EscritorioPrincipal extends JFrame {
             return;
         }
         archivoCopiado = seleccion;
+        esCortar = false;
     }
 
     private void pegarArchivo(JTree arbol, JInternalFrame ventana, File raiz) {
@@ -560,17 +593,27 @@ public class EscritorioPrincipal extends JFrame {
                 : (seleccion != null ? seleccion.getParentFile() : raiz);
         File destino = nombreDisponible(destinoCarpeta, archivoCopiado.getName());
         try {
-            copiarRecursivamente(archivoCopiado, destino);
+            if (esCortar) {
+                Files.move(archivoCopiado.toPath(), destino.toPath(), StandardCopyOption.REPLACE_EXISTING);
+                archivoCopiado = null;
+                esCortar = false;
+            } else {
+                copiarRecursivamente(archivoCopiado, destino);
+            }
+            
             actualizarArbol(arbol, raiz, "Nombre");
             expandirYSeleccionar(arbol, destino);
-        } catch (IOException ex) {
+            
+} catch (IOException ex) {
             JOptionPane.showMessageDialog(ventana, "No se pudo pegar: " + ex.getMessage(), "Explorador", JOptionPane.ERROR_MESSAGE);
         }
     }
 
     private File nombreDisponible(File carpeta, String nombre) {
         File candidato = new File(carpeta, nombre);
-        if (!candidato.exists()) return candidato;
+        if (!candidato.exists()) {
+            return candidato;
+        }
         int punto = nombre.lastIndexOf('.');
         String base = punto > 0 ? nombre.substring(0, punto) : nombre;
         String extension = punto > 0 ? nombre.substring(punto) : "";
@@ -583,50 +626,34 @@ public class EscritorioPrincipal extends JFrame {
 
     private void copiarRecursivamente(File origen, File destino) throws IOException {
         if (origen.isDirectory()) {
-            if (!destino.mkdirs() && !destino.isDirectory()) throw new IOException("No se pudo crear " + destino.getName());
+            if (!destino.mkdirs() && !destino.isDirectory()) {
+                throw new IOException("No se pudo crear " + destino.getName());
+            }
             File[] hijos = origen.listFiles();
-            if (hijos != null) for (File hijo : hijos) copiarRecursivamente(hijo, new File(destino, hijo.getName()));
+            if (hijos != null) {
+                for (File hijo : hijos) {
+                    copiarRecursivamente(hijo, new File(destino, hijo.getName()));
+                }
+            }
         } else {
             Files.copy(origen.toPath(), destino.toPath());
         }
     }
 
-    private void organizarCarpetaSeleccionada(JTree arbol, JInternalFrame ventana, File raiz, File carpetaSeleccionada) {
-        Thread hiloOrganizador = new Thread(() -> {
-            File[] archivos = carpetaSeleccionada.listFiles(File::isFile);
-            if (archivos != null) {
-                for (File archivo : archivos) {
-                    String nombre = archivo.getName().toLowerCase();
-                    String categoria;
-                    if (nombre.endsWith(".png") || nombre.endsWith(".jpg") || nombre.endsWith(".jpeg")) {
-                        categoria = "imagenes";
-                    } else if (nombre.endsWith(".mp3") || nombre.endsWith(".wav")) {
-                        categoria = "musica";
-                    } else if (nombre.endsWith(".txt") || nombre.endsWith(".pdf") || nombre.endsWith(".docx")) {
-                        categoria = "documentos";
-                    } else {
-                        continue;
-                    }
-                    File carpetaDestino = new File(carpetaSeleccionada, categoria);
-                    carpetaDestino.mkdirs();
-                    try {
-                        Files.move(archivo.toPath(), nombreDisponible(carpetaDestino, archivo.getName()).toPath());
-                    } catch (IOException ignored) {
-                        
-                    }
-                }
-            }
-
-            SwingUtilities.invokeLater(() -> {
-                actualizarArbol(arbol, raiz, "Nombre");
-                JOptionPane.showMessageDialog(ventana, "Carpeta organizada.");
-            });
-        }, "organizador-archivos");
-        hiloOrganizador.start();
+    private void cortarArchivo(JTree arbol, JInternalFrame ventana) {
+        File seleccion = obtenerArchivoSeleccionado(arbol);
+        if (seleccion == null) {
+            JOptionPane.showMessageDialog(ventana, "Selecciona un archivo o carpeta para cortar.");
+            return;
+        }
+        archivoCopiado = seleccion;
+        esCortar = true;
     }
 
     private void abrirEditorTexto() {
-        if (traerAlFrenteSiExiste("editor")) return;
+        if (traerAlFrenteSiExiste("editor")) {
+            return;
+        }
 
         JInternalFrame ventana = new JInternalFrame("Editor de texto", true, true, true, true);
         ventana.setSize(500, 400);
@@ -744,68 +771,109 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private void abrirVisorImagenes() {
-        if (traerAlFrenteSiExiste("visor")) return;
+        if (traerAlFrenteSiExiste("visor")) {
+            return;
+        }
 
         JInternalFrame ventana = new JInternalFrame("Visor de imágenes", true, true, true, true);
-        ventana.setSize(450, 420);
+        ventana.setSize(500, 450);
         ventana.setLayout(new BorderLayout());
 
         JLabel lblImagen = new JLabel("Selecciona una carpeta con imágenes", SwingConstants.CENTER);
         JScrollPane scroll = new JScrollPane(lblImagen);
+        
+        JLabel lblInfo = new JLabel("Sin imagenes cargadas", SwingConstants.CENTER);
+        lblInfo.setFont(lblInfo.getFont().deriveFont(Font.BOLD, 12f));
+        lblInfo.setBorder(BorderFactory.createEmptyBorder(6,6,6,6));
 
         List<File> imagenes = new ArrayList<>();
         int[] indiceActual = {-1};
 
-        JButton btnCarpeta = new JButton("Elegir carpeta");
-        JButton btnAnterior = new JButton("Anterior");
-        JButton btnSiguiente = new JButton("Siguiente");
+        JButton btnCarpeta = new JButton("Abrir imagen / carpeta");
+        JButton btnAnterior = new JButton("◄ Anterior");
+        JButton btnSiguiente = new JButton("Siguiente ►");
+        
+        Runnable actualizarVista = () -> {
+            mostrarImagenActual(lblImagen, lblInfo, imagenes, indiceActual[0]);
+        };
 
         btnCarpeta.addActionListener(e -> {
-            JFileChooser chooser = new JFileChooser(System.getProperty("user.home"));
-            chooser.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            File raiz = obtenerRaizDeTrabajo();
+            
+            JFileChooser chooser = new JFileChooser(raiz.exists() ? raiz : new File(System.getProperty("user.home")));
+            
+            chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
+            chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Imagenes (*.png, *.jpg, *.jpeg)", "png", "jpg", "jpeg"));
+            
             if (chooser.showOpenDialog(ventana) == JFileChooser.APPROVE_OPTION) {
+                File eleccion = chooser.getSelectedFile();
                 imagenes.clear();
-                buscarImagenesRecursivo(chooser.getSelectedFile(), imagenes);
-                indiceActual[0] = imagenes.isEmpty() ? -1 : 0;
-                mostrarImagenActual(lblImagen, imagenes, indiceActual[0]);
+                
+                if (eleccion.isDirectory()) {
+                    buscarImagenesRecursivo(eleccion, imagenes);
+                    indiceActual[0] = imagenes.isEmpty() ? -1 : 0;
+                } else {
+                File carpetaPadre = eleccion.getParentFile();
+                    if (carpetaPadre != null) {
+                        buscarImagenesRecursivo(carpetaPadre, imagenes);
+                    } else {
+                    imagenes.add(eleccion);
+                    }
+                    indiceActual[0] = imagenes.indexOf(eleccion);
+                    if (indiceActual[0] == -1 && !imagenes.isEmpty()) {
+                        indiceActual[0] = 0;
+                    }
+                }
+                actualizarVista.run();
             }
         });
 
         btnAnterior.addActionListener(e -> {
             if (!imagenes.isEmpty()) {
                 indiceActual[0] = (indiceActual[0] - 1 + imagenes.size()) % imagenes.size();
-                mostrarImagenActual(lblImagen, imagenes, indiceActual[0]);
+                actualizarVista.run();
             }
         });
 
         btnSiguiente.addActionListener(e -> {
             if (!imagenes.isEmpty()) {
                 indiceActual[0] = (indiceActual[0] + 1) % imagenes.size();
-                mostrarImagenActual(lblImagen, imagenes, indiceActual[0]);
+                actualizarVista.run();
             }
         });
+        
+        File raiz = obtenerRaizDeTrabajo();
+        if (raiz.exists()) {
+            buscarImagenesRecursivo(raiz, imagenes);
+            if (!imagenes.isEmpty()) {
+                indiceActual[0] = 0;
+            }
+        }
+        
+        JPanel panelSuperior = new JPanel(new BorderLayout());
+        panelSuperior.add(lblInfo, BorderLayout.CENTER);
+        
 
         JPanel panelBotones = new JPanel();
         panelBotones.add(btnCarpeta);
         panelBotones.add(btnAnterior);
         panelBotones.add(btnSiguiente);
 
+        ventana.add(panelSuperior, BorderLayout.NORTH);
         ventana.add(scroll, BorderLayout.CENTER);
         ventana.add(panelBotones, BorderLayout.SOUTH);
+        
+        actualizarVista.run();
 
         mostrarVentanaInterna("visor", ventana);
     }
 
-    /**
-     * Busca archivos .png/.jpg/.jpeg dentro de la carpeta dada, incluyendo
-     * sus subcarpetas. Antes solo se miraba el primer nivel, por lo que si
-     * las fotos estaban en una subcarpeta (típico en Windows: "Imágenes >
-     * Cámara", "Imágenes > 2024", carpetas de OneDrive, etc.) el visor
-     * reportaba "No hay imágenes" aunque sí existieran.
-     */
+
     private void buscarImagenesRecursivo(File carpeta, List<File> destino) {
         File[] archivos = carpeta.listFiles();
-        if (archivos == null) return; // sin permiso de lectura o no es carpeta
+        if (archivos == null) {
+            return;
+        }
         for (File f : archivos) {
             if (f.isDirectory()) {
                 buscarImagenesRecursivo(f, destino);
@@ -818,20 +886,56 @@ public class EscritorioPrincipal extends JFrame {
         }
     }
 
-    private void mostrarImagenActual(JLabel lblImagen, List<File> imagenes, int indice) {
+    private void mostrarImagenActual(JLabel lblImagen, JLabel lblInfo, List<File> imagenes, int indice) {
         if (indice < 0 || indice >= imagenes.size()) {
             lblImagen.setIcon(null);
-            lblImagen.setText("No hay imágenes en esta carpeta");
+            lblImagen.setText("No hay imágenes seleccionadas");
+            lblInfo.setText("0 / 0 - Sin imagenes");
             return;
         }
-        ImageIcon icono = new ImageIcon(imagenes.get(indice).getAbsolutePath());
-        Image escalada = icono.getImage().getScaledInstance(380, 300, Image.SCALE_SMOOTH);
-        lblImagen.setIcon(new ImageIcon(escalada));
+        File imgFile = imagenes.get(indice);
+        ImageIcon iconoOriginal = new ImageIcon(imgFile.getAbsolutePath());
+        
+        Image img = iconoOriginal.getImage();
+        
+        int anchoOriginal = iconoOriginal.getIconWidth();
+        int altoOriginal = iconoOriginal.getIconHeight();
+        
+        if (anchoOriginal <= 0 || altoOriginal <= 0) {
+            lblImagen.setIcon(null);
+            lblImagen.setText("No se pudo cargar la imagen");
+            return;
+        }
+        
+        int anchoMax = 440;
+        int altoMax = 320;
+        
+        double escala = Math.min((double) anchoMax / anchoOriginal, (double) altoMax / altoOriginal);
+        int nuevoAncho = (int) (anchoOriginal * escala);
+        int nuevoAlto = (int) (altoOriginal * escala);
+        
+        java.awt.image.BufferedImage imagenEscalada = new java.awt.image.BufferedImage(nuevoAncho, nuevoAlto, java.awt.image.BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = imagenEscalada.createGraphics();
+        
+        g2.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        
+        g2.drawImage(img, 0, 0, nuevoAncho, nuevoAlto, null);
+        g2.dispose();
+        lblImagen.setIcon(new ImageIcon(imagenEscalada));
         lblImagen.setText(null);
+        lblInfo.setText(imgFile.getName() + " (" + (indice + 1) + " de " + imagenes.size() + ")");
+
+        lblImagen.revalidate();
+        lblImagen.repaint();
+    
     }
 
     private void abrirConsola() {
-        if (traerAlFrenteSiExiste("consola")) return;
+        if (traerAlFrenteSiExiste("consola")) {
+            return;
+        }
 
         JInternalFrame ventana = new JInternalFrame("Consola", true, true, true, true);
         ventana.setSize(500, 350);
@@ -853,7 +957,9 @@ public class EscritorioPrincipal extends JFrame {
             String comando = campoComando.getText().trim();
             areaSalida.append(carpetaActual[0].getAbsolutePath() + "> " + comando + "\n");
             String resultado = procesarComandoConsola(comando, carpetaActual, raizPermitida, areaSalida);
-            if (resultado != null) areaSalida.append(resultado + "\n");
+            if (resultado != null) {
+                areaSalida.append(resultado + "\n");
+            }
             campoComando.setText("");
             areaSalida.setCaretPosition(areaSalida.getDocument().getLength());
         });
@@ -872,7 +978,9 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private String procesarComandoConsola(String comando, File[] carpetaActual, File raizPermitida, JTextArea areaSalidaConsola) {
-        if (comando.isEmpty()) return null;
+        if (comando.isEmpty()) {
+            return null;
+        }
 
         String[] partes = comando.split("\\s+", 2);
         String instruccion = partes[0].toLowerCase();
@@ -903,14 +1011,20 @@ public class EscritorioPrincipal extends JFrame {
                 return null;
 
             case "mkdir":
-                if (argumento.isEmpty()) return "Uso: mkdir <nombre>";
-                if (!esNombreSeguro(argumento)) return "Nombre de carpeta no válido.";
+                if (argumento.isEmpty()) {
+                    return "Uso: mkdir <nombre>";
+                }
+                if (!esNombreSeguro(argumento)) {
+                    return "Nombre de carpeta no válido.";
+                }
                 boolean creado = new File(carpetaActual[0], argumento).mkdir();
                 return creado ? "Carpeta creada." : "No se pudo crear la carpeta.";
 
             case "rm":
             case "rmdir":
-                if (argumento.isEmpty()) return "Uso: " + instruccion + " <nombre>";
+                if (argumento.isEmpty()) {
+                    return "Uso: " + instruccion + " <nombre>";
+                }
                 File aEliminar = new File(carpetaActual[0], argumento);
                 if (!esNombreSeguro(argumento) || !estaDentroDeRaiz(aEliminar, raizPermitida)) {
                     return "No puedes eliminar fuera de tu carpeta de usuario.";
@@ -919,7 +1033,9 @@ public class EscritorioPrincipal extends JFrame {
                 return eliminado ? "Eliminado." : "No se pudo eliminar (¿existe, es una carpeta y está vacía?).";
 
             case "del":
-                if (argumento.isEmpty()) return "Uso: del <archivo>";
+                if (argumento.isEmpty()) {
+                    return "Uso: del <archivo>";
+                }
                 File archivoAEliminar = new File(carpetaActual[0], argumento);
                 if (!esNombreSeguro(argumento) || !estaDentroDeRaiz(archivoAEliminar, raizPermitida)) {
                     return "No puedes eliminar fuera de tu carpeta de usuario.";
@@ -937,8 +1053,12 @@ public class EscritorioPrincipal extends JFrame {
                 }
                 File origenRen = new File(carpetaActual[0], argsRen[0]);
                 File destinoRen = new File(carpetaActual[0], argsRen[1]);
-                if (!origenRen.exists()) return "No existe: " + argsRen[0];
-                if (destinoRen.exists()) return "Ya existe un archivo o carpeta con ese nombre.";
+                if (!origenRen.exists()) {
+                    return "No existe: " + argsRen[0];
+                }
+                if (destinoRen.exists()) {
+                    return "Ya existe un archivo o carpeta con ese nombre.";
+                }
                 return origenRen.renameTo(destinoRen) ? "Renombrado." : "No se pudo renombrar.";
 
             case "copy":
@@ -951,8 +1071,12 @@ public class EscritorioPrincipal extends JFrame {
                 }
                 File origenCopy = new File(carpetaActual[0], argsCopy[0]);
                 File destinoCopy = new File(carpetaActual[0], argsCopy[1]);
-                if (!origenCopy.isFile()) return "El origen no existe o no es un archivo.";
-                if (destinoCopy.exists()) return "Ya existe un archivo con ese nombre.";
+                if (!origenCopy.isFile()) {
+                    return "El origen no existe o no es un archivo.";
+                }
+                if (destinoCopy.exists()) {
+                    return "Ya existe un archivo con ese nombre.";
+                }
                 try {
                     java.nio.file.Files.copy(origenCopy.toPath(), destinoCopy.toPath());
                     return "Copiado.";
@@ -971,7 +1095,9 @@ public class EscritorioPrincipal extends JFrame {
                 return "Mini-Windows [Versión 1.0]";
 
             case "cd":
-                if (argumento.isEmpty()) return "Uso: cd <carpeta>";
+                if (argumento.isEmpty()) {
+                    return "Uso: cd <carpeta>";
+                }
                 File nuevaCarpeta = new File(carpetaActual[0], argumento);
                 if (nuevaCarpeta.isDirectory() && estaDentroDeRaiz(nuevaCarpeta, raizPermitida)) {
                     carpetaActual[0] = nuevaCarpeta;
@@ -981,12 +1107,16 @@ public class EscritorioPrincipal extends JFrame {
 
             case "cd..":
                 File padre = carpetaActual[0].getParentFile();
-                if (padre != null && estaDentroDeRaiz(padre, raizPermitida)) carpetaActual[0] = padre;
+                if (padre != null && estaDentroDeRaiz(padre, raizPermitida)) {
+                    carpetaActual[0] = padre;
+                }
                 return null;
 
             case "dir":
                 File[] contenido = carpetaActual[0].listFiles();
-                if (contenido == null || contenido.length == 0) return "(carpeta vacía)";
+                if (contenido == null || contenido.length == 0) {
+                    return "(carpeta vacía)";
+                }
                 StringBuilder sb = new StringBuilder();
                 for (File f : contenido) {
                     sb.append(f.isDirectory() ? "<DIR>  " : "       ").append(f.getName()).append("\n");
@@ -1010,18 +1140,20 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private void abrirReproductor() {
-        if (traerAlFrenteSiExiste("reproductor")) return;
+        if (traerAlFrenteSiExiste("reproductor")) {
+            return;
+        }
 
         JInternalFrame ventana = new JInternalFrame("Reproductor", true, true, true, true);
         ventana.setSize(360, 260);
         ventana.setLayout(new BorderLayout());
 
         JLabel lblInfo = new JLabel(
-                "<html><center>Módulo pendiente de implementación.<br><br>" +
-                        "Aquí debe correr en su propio hilo la reproducción<br>" +
-                        "de archivos .mp3 obtenidos del explorador, con<br>" +
-                        "controles de Play / Pause / Stop, lista de canciones,<br>" +
-                        "carátula y descripción.</center></html>",
+                "<html><center>Módulo pendiente de implementación.<br><br>"
+                + "Aquí debe correr en su propio hilo la reproducción<br>"
+                + "de archivos .mp3 obtenidos del explorador, con<br>"
+                + "controles de Play / Pause / Stop, lista de canciones,<br>"
+                + "carátula y descripción.</center></html>",
                 SwingConstants.CENTER);
 
         JPanel controles = new JPanel();
@@ -1036,7 +1168,9 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private void abrirInstaPlus() {
-        if (traerAlFrenteSiExiste("instaplus")) return;
+        if (traerAlFrenteSiExiste("instaplus")) {
+            return;
+        }
 
         JInternalFrame ventana = new JInternalFrame("INSTA+", true, true, true, true);
         ventana.setSize(480, 560);
@@ -1053,7 +1187,9 @@ public class EscritorioPrincipal extends JFrame {
     }
 
     private void abrirAdministrarUsuarios() {
-        if (traerAlFrenteSiExiste("administrar")) return;
+        if (traerAlFrenteSiExiste("administrar")) {
+            return;
+        }
 
         try {
             List<Usuario> usuarios = GestorArchivosBinarios.cargarUsuarios();
@@ -1072,13 +1208,15 @@ public class EscritorioPrincipal extends JFrame {
             JButton btnActivarDesactivar = new JButton("Activar / Desactivar");
             btnActivarDesactivar.addActionListener(e -> {
                 int indice = lista.getSelectedIndex();
-                if (indice < 0) return;
+                if (indice < 0) {
+                    return;
+                }
                 Usuario seleccionado = usuarios.get(indice);
                 seleccionado.setActiva(!seleccionado.isActiva());
                 try {
                     GestorArchivosBinarios.actualizarUsuario(seleccionado);
-                    modelo.set(indice, seleccionado.getUsername() + "  -  " +
-                            (seleccionado.isActiva() ? "Activa" : "Desactivada"));
+                    modelo.set(indice, seleccionado.getUsername() + "  -  "
+                            + (seleccionado.isActiva() ? "Activa" : "Desactivada"));
                 } catch (ArchivoCorruptoException | IOException ex) {
                     JOptionPane.showMessageDialog(ventana, "No se pudo actualizar: " + ex.getMessage());
                 }
@@ -1087,7 +1225,9 @@ public class EscritorioPrincipal extends JFrame {
             JButton btnEliminar = new JButton("Eliminar usuario");
             btnEliminar.addActionListener(e -> {
                 int indice = lista.getSelectedIndex();
-                if (indice < 0) return;
+                if (indice < 0) {
+                    return;
+                }
                 Usuario seleccionado = usuarios.get(indice);
 
                 if (seleccionado.getUsername().equalsIgnoreCase(usuarioActual.getUsername())) {
@@ -1098,10 +1238,12 @@ public class EscritorioPrincipal extends JFrame {
                 }
 
                 int confirmar = JOptionPane.showConfirmDialog(ventana,
-                        "¿Eliminar al usuario '" + seleccionado.getUsername() +
-                                "' y todos sus archivos? Esta acción no se puede deshacer.",
+                        "¿Eliminar al usuario '" + seleccionado.getUsername()
+                        + "' y todos sus archivos? Esta acción no se puede deshacer.",
                         "Confirmar eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
-                if (confirmar != JOptionPane.YES_OPTION) return;
+                if (confirmar != JOptionPane.YES_OPTION) {
+                    return;
+                }
 
                 try {
                     GestorArchivosBinarios.eliminarUsuario(seleccionado.getUsername());
