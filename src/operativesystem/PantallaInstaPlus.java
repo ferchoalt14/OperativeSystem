@@ -6,43 +6,28 @@ import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
 
-/**
- * Vista inicial del módulo INSTA+.
- *
- * Se monta como el contenido de un JInternalFrame dentro de EscritorioPrincipal
- * y usa un CardLayout interno para alternar entre:
- *  - "LOGIN":      inicio de sesión de INSTA+.
- *  - "REGISTRO":   creación de una cuenta nueva (sin foto de perfil todavía).
- *  - "BIENVENIDA": pantalla post-login, donde recién ahí se puede elegir foto.
- *
- * IMPORTANTE: las cuentas de INSTA+ son EXCLUSIVAS de este módulo. Se manejan
- * con la clase UsuarioInsta y se guardan mediante GestorInstaPlus, en un
- * espacio de archivos binarios totalmente separado del sistema operativo
- * Mini-Windows (que usa Usuario / GestorArchivosBinarios). Registrarte en
- * INSTA+ no crea una cuenta del sistema operativo, y no aparece en
- * "Administrar usuarios".
- */
+
 public class PantallaInstaPlus extends JPanel {
 
     private final CardLayout cardLayout = new CardLayout();
     private final JPanel panelContenedor = new JPanel(cardLayout);
 
-    // --- Campos de la pantalla de Login ---
+    
     private JTextField txtLoginUsername;
     private JPasswordField txtLoginPassword;
 
-    // --- Campos de la pantalla de Registro ---
+    
     private JTextField txtRegNombre;
     private JComboBox<String> cmbRegGenero;
     private JTextField txtRegUsername;
     private JPasswordField txtRegPassword;
     private JSpinner spnRegEdad;
 
-    // --- Pantalla de bienvenida (post-login) ---
+    
     private JLabel lblBienvenida;
     private JLabel lblAvatar;
 
-    // Usuario de INSTA+ actualmente logueado (null si no hay sesión iniciada).
+   
     private UsuarioInsta usuarioInstaActual;
 
     public PantallaInstaPlus() {
@@ -59,9 +44,6 @@ public class PantallaInstaPlus extends JPanel {
         cardLayout.show(panelContenedor, "LOGIN");
     }
 
-    // ============================================================
-    //  PANTALLA: LOGIN
-    // ============================================================
 
     private JPanel construirPanelLogin() {
         JPanel panel = new JPanel(new GridBagLayout());
@@ -121,7 +103,7 @@ public class PantallaInstaPlus extends JPanel {
         }
 
         try {
-            // Autenticación contra users_insta.ins (EXCLUSIVO de INSTA+, no el del SO).
+           
             UsuarioInsta usuario = GestorInstaPlus.autenticar(username, password);
 
             if (usuario == null) {
@@ -129,8 +111,7 @@ public class PantallaInstaPlus extends JPanel {
                 return;
             }
 
-            // Por si la cuenta es de antes de que existiera este flujo, nos aseguramos
-            // de que su espacio personal (following.ins, insta.ins, etc.) ya exista.
+            
             GestorInstaPlus.crearArchivosPersonales(usuario.getUsername());
 
             mostrarBienvenida(usuario);
@@ -161,9 +142,6 @@ public class PantallaInstaPlus extends JPanel {
         }
     }
 
-    // ============================================================
-    //  PANTALLA: REGISTRO  (sin foto de perfil: eso se elige tras el login)
-    // ============================================================
 
     private JPanel construirPanelRegistro() {
         JPanel panel = new JPanel(new GridBagLayout());
@@ -256,14 +234,14 @@ public class PantallaInstaPlus extends JPanel {
         String password = new String(txtRegPassword.getPassword());
         int edad = (Integer) spnRegEdad.getValue();
 
-        // Validación: campos obligatorios vacíos.
+       
         if (nombre.isEmpty() || username.isEmpty() || password.isEmpty()) {
             JOptionPane.showMessageDialog(this, "Completa todos los campos obligatorios.",
                     "Datos incompletos", JOptionPane.WARNING_MESSAGE);
             return;
         }
 
-        // Validación: requisitos de contraseña segura (definidos en TemaUI).
+       
         if (!TemaUI.PATRON_PASSWORD_SEGURA.matcher(password).matches()) {
             JOptionPane.showMessageDialog(this,
                     "La contraseña no cumple los requisitos mínimos:\n" + TemaUI.REQUISITOS_PASSWORD,
@@ -274,8 +252,7 @@ public class PantallaInstaPlus extends JPanel {
         UsuarioInsta nuevo = new UsuarioInsta(nombre, genero, username, password, edad);
 
         try {
-            // La unicidad del username (dentro del universo de INSTA+, no del SO)
-            // se valida dentro de registrarUsuario, que lanza UsernameDuplicadoException.
+        
             GestorInstaPlus.registrarUsuario(nuevo);
 
             JOptionPane.showMessageDialog(this,
@@ -302,9 +279,7 @@ public class PantallaInstaPlus extends JPanel {
         cmbRegGenero.setSelectedIndex(0);
     }
 
-    // ============================================================
-    //  PANTALLA: BIENVENIDA (post-login) — aquí sí se elige la foto de perfil
-    // ============================================================
+    
 
     private JPanel construirPanelBienvenida() {
         JPanel panel = new JPanel(new BorderLayout(10, 10));
@@ -382,11 +357,7 @@ public class PantallaInstaPlus extends JPanel {
         }
     }
 
-    /**
-     * Permite elegir la foto de perfil UNA VEZ que la sesión de INSTA+ ya está
-     * iniciada (nunca durante el registro), tal como se pidió: el placeholder
-     * de foto se quitó del formulario de creación de cuenta.
-     */
+   
     private void elegirFotoPerfil() {
         if (usuarioInstaActual == null) return;
 

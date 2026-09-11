@@ -1,6 +1,7 @@
 package operativesystem;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.text.*;
 import javax.swing.text.rtf.RTFEditorKit;
 import javax.swing.tree.*;
@@ -23,6 +24,14 @@ public class EscritorioPrincipal extends JFrame {
     private File archivoCopiado;
     private boolean esCortar = false;
     private final Map<String, JInternalFrame> ventanasAbiertas = new HashMap<>();
+
+   
+    private JPanel panelVentanasTaskbar;
+    private final Map<String, JButton> botonesTaskbar = new LinkedHashMap<>();
+    private JLabel lblRelojTaskbar;
+    private Timer timerRelojTaskbar;
+    private static final Color TASKBAR_BOTON_NORMAL = new Color(55, 55, 55);
+    private static final Color TASKBAR_BOTON_ACTIVO = TemaUI.ACCENT;
 
     public EscritorioPrincipal(Usuario usuario) {
         super("Mini-Windows - " + usuario.getUsername()
@@ -53,7 +62,8 @@ public class EscritorioPrincipal extends JFrame {
         };
 
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
-        setSize(1000, 650);
+        setMinimumSize(new Dimension(1024, 650));
+        setSize(1280, 800);
         setLocationRelativeTo(null);
 
         escritorio.setBackground(TemaUI.FONDO);
@@ -68,6 +78,122 @@ public class EscritorioPrincipal extends JFrame {
 
         add(construirBarraSuperior(), BorderLayout.NORTH);
         add(escritorio, BorderLayout.CENTER);
+        add(construirBarraTareas(), BorderLayout.SOUTH);
+
+      
+        setExtendedState(JFrame.MAXIMIZED_BOTH);
+
+        addWindowListener(new java.awt.event.WindowAdapter() {
+            @Override
+            public void windowClosed(java.awt.event.WindowEvent e) {
+                if (timerRelojTaskbar != null) {
+                    timerRelojTaskbar.stop();
+                }
+            }
+        });
+    }
+
+   
+
+    private JPanel construirBarraTareas() {
+        JPanel barra = new JPanel(new BorderLayout());
+        barra.setBackground(TemaUI.TASKBAR_FONDO);
+        barra.setPreferredSize(new Dimension(0, 46));
+        barra.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(0, 0, 0, 90)));
+
+        JPanel panelIzquierdo = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 6));
+        panelIzquierdo.setOpaque(false);
+        panelIzquierdo.add(crearBotonInicio());
+        barra.add(panelIzquierdo, BorderLayout.WEST);
+
+        panelVentanasTaskbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 7));
+        panelVentanasTaskbar.setOpaque(false);
+        barra.add(panelVentanasTaskbar, BorderLayout.CENTER);
+
+        lblRelojTaskbar = new JLabel("", SwingConstants.CENTER);
+        lblRelojTaskbar.setForeground(Color.WHITE);
+        lblRelojTaskbar.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        actualizarRelojTaskbar();
+        timerRelojTaskbar = new Timer(1000, e -> actualizarRelojTaskbar());
+        timerRelojTaskbar.start();
+
+        JPanel panelDerecho = new JPanel(new FlowLayout(FlowLayout.RIGHT, 16, 4));
+        panelDerecho.setOpaque(false);
+        panelDerecho.add(lblRelojTaskbar);
+        barra.add(panelDerecho, BorderLayout.EAST);
+
+        return barra;
+    }
+
+    private void actualizarRelojTaskbar() {
+        Date ahora = new Date();
+        lblRelojTaskbar.setText("<html><div style='text-align:center;'>"
+                + new SimpleDateFormat("HH:mm").format(ahora) + "<br>"
+                + new SimpleDateFormat("dd/MM/yyyy").format(ahora) + "</div></html>");
+    }
+
+    private JButton crearBotonInicio() {
+        JButton boton = new JButton("\u229E  Inicio");
+        boton.setForeground(Color.WHITE);
+        boton.setFont(new Font("Segoe UI Semibold", Font.PLAIN, 13));
+        boton.setContentAreaFilled(false);
+        boton.setBorderPainted(false);
+        boton.setFocusPainted(false);
+        boton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        boton.setBorder(BorderFactory.createEmptyBorder(8, 14, 8, 14));
+
+        JPopupMenu menu = construirMenuInicio();
+        boton.addActionListener(e -> menu.show(boton, 0, -menu.getPreferredSize().height));
+        return boton;
+    }
+
+    private JPopupMenu construirMenuInicio() {
+        JPopupMenu menu = new JPopupMenu();
+        menu.add(crearItemMenuInicio("Explorador", e -> abrirExplorador()));
+        menu.add(crearItemMenuInicio("Editor de texto", e -> abrirEditorTexto()));
+        menu.add(crearItemMenuInicio("Visor de imágenes", e -> abrirVisorImagenes()));
+        menu.add(crearItemMenuInicio("Consola", e -> abrirConsola()));
+        menu.add(crearItemMenuInicio("Reproductor", e -> abrirReproductor()));
+        menu.add(crearItemMenuInicio("INSTA+", e -> abrirInstaPlus()));
+        if (usuarioActual.isAdministrador()) {
+            menu.add(crearItemMenuInicio("Administrar usuarios", e -> abrirAdministrarUsuarios()));
+        }
+        menu.addSeparator();
+        menu.add(crearItemMenuInicio("Mi perfil", e -> abrirPerfil()));
+        menu.add(crearItemMenuInicio("Cerrar sesión", e -> cerrarSesion()));
+        return menu;
+    }
+
+    private JMenuItem crearItemMenuInicio(String texto, java.awt.event.ActionListener accion) {
+        JMenuItem item = new JMenuItem(texto);
+        item.setFont(new Font("Segoe UI", Font.PLAIN, 13));
+        item.addActionListener(accion);
+        return item;
+    }
+
+    private void alternarVentanaTaskbar(String clave) {
+        JInternalFrame ventana = ventanasAbiertas.get(clave);
+        if (ventana == null) {
+            return;
+        }
+        try {
+            if (ventana.isIcon()) {
+                ventana.setIcon(false);
+                ventana.setSelected(true);
+            } else if (ventana.isSelected()) {
+                ventana.setIcon(true);
+            } else {
+                ventana.setSelected(true);
+            }
+        } catch (java.beans.PropertyVetoException ignored) {
+        }
+    }
+
+    private void marcarBotonTaskbarActivo(String clave) {
+        for (Map.Entry<String, JButton> entrada : botonesTaskbar.entrySet()) {
+            entrada.getValue().setBackground(
+                    entrada.getKey().equals(clave) ? TASKBAR_BOTON_ACTIVO : TASKBAR_BOTON_NORMAL);
+        }
     }
 
     private JPanel construirPanelIconos() {
@@ -518,12 +644,7 @@ public class EscritorioPrincipal extends JFrame {
         expandirYSeleccionar(arbol, nuevaCarpeta);
     }
 
-    /**
-     * Busca el nodo correspondiente al archivo/carpeta dado dentro del árbol,
-     * expande la ruta hasta él y lo deja seleccionado y visible. Sin esto,
-     * setModel() en actualizarArbol() colapsa el árbol y la carpeta recién
-     * creada "desaparece" visualmente aunque sí se haya creado en disco.
-     */
+  
     private void expandirYSeleccionar(JTree arbol, File objetivo) {
         DefaultMutableTreeNode raizNodo = (DefaultMutableTreeNode) arbol.getModel().getRoot();
         DefaultMutableTreeNode encontrado = buscarNodoPorArchivo(raizNodo, objetivo);
@@ -1176,10 +1297,7 @@ public class EscritorioPrincipal extends JFrame {
         ventana.setSize(480, 560);
         ventana.setLayout(new BorderLayout());
 
-        // PantallaInstaPlus contiene su propio CardLayout con Login/Registro
-        // (y, tras iniciar sesión, una pantalla de bienvenida simple).
-        // Usa GestorArchivosBinarios para autenticar/registrar, reutilizando
-        // el mismo login de Mini-Windows.
+        
         PantallaInstaPlus panelInstaPlus = new PantallaInstaPlus();
         ventana.add(panelInstaPlus, BorderLayout.CENTER);
 
@@ -1284,10 +1402,43 @@ public class EscritorioPrincipal extends JFrame {
 
     private void mostrarVentanaInterna(String clave, JInternalFrame ventana) {
         ventanasAbiertas.put(clave, ventana);
+
+        JButton botonTaskbar = new JButton(ventana.getTitle());
+        botonTaskbar.setFont(new Font("Segoe UI", Font.PLAIN, 12));
+        botonTaskbar.setForeground(Color.WHITE);
+        botonTaskbar.setBackground(TASKBAR_BOTON_ACTIVO);
+        botonTaskbar.setOpaque(true);
+        botonTaskbar.setContentAreaFilled(true);
+        botonTaskbar.setBorderPainted(false);
+        botonTaskbar.setFocusPainted(false);
+        botonTaskbar.setMargin(new Insets(4, 12, 4, 12));
+        botonTaskbar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        botonTaskbar.addActionListener(e -> alternarVentanaTaskbar(clave));
+        botonesTaskbar.put(clave, botonTaskbar);
+        panelVentanasTaskbar.add(botonTaskbar);
+        panelVentanasTaskbar.revalidate();
+        panelVentanasTaskbar.repaint();
+
         ventana.addInternalFrameListener(new javax.swing.event.InternalFrameAdapter() {
             @Override
             public void internalFrameClosed(javax.swing.event.InternalFrameEvent e) {
                 ventanasAbiertas.remove(clave);
+                JButton boton = botonesTaskbar.remove(clave);
+                if (boton != null) {
+                    panelVentanasTaskbar.remove(boton);
+                    panelVentanasTaskbar.revalidate();
+                    panelVentanasTaskbar.repaint();
+                }
+            }
+
+            @Override
+            public void internalFrameActivated(javax.swing.event.InternalFrameEvent e) {
+                marcarBotonTaskbarActivo(clave);
+            }
+
+            @Override
+            public void internalFrameDeiconified(javax.swing.event.InternalFrameEvent e) {
+                marcarBotonTaskbarActivo(clave);
             }
         });
         escritorio.add(ventana);
@@ -1296,5 +1447,6 @@ public class EscritorioPrincipal extends JFrame {
             ventana.setSelected(true);
         } catch (java.beans.PropertyVetoException ignored) {
         }
+        marcarBotonTaskbarActivo(clave);
     }
 }
