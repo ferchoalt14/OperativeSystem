@@ -1294,7 +1294,7 @@ public class EscritorioPrincipal extends JFrame {
         }
 
         JInternalFrame ventana = new JInternalFrame("INSTA+", true, true, true, true);
-        ventana.setSize(480, 560);
+        ventana.setSize(760, 600);
         ventana.setLayout(new BorderLayout());
 
         
