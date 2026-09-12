@@ -2,18 +2,6 @@
 <project-private xmlns="http://www.netbeans.org/ns/project-private/1">
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
-        <group>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/ArchivoCorruptoException.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/CuentaDesactivadaException.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PantallaLogin.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/EscritorioPrincipal.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/UsernameDuplicadoException.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/GestorArchivosBinarios.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/Usuario.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/TemaUI.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PantallaInstaPlus.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/GestorInstaPlus.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/UsuarioInsta.java</file>
-        </group>
+        <group/>
     </open-files>
 </project-private>

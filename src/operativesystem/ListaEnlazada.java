@@ -1,24 +1,24 @@
 package operativesystem;
-
+ 
 import java.util.Iterator;
 import java.util.NoSuchElementException;
-
+ 
 /**
  *
  * @author Leandro
  */
 public class ListaEnlazada<T> implements Iterable<T> {
-
+ 
     private Nodo<T> cabeza;
     private Nodo<T> cola;
     private int tamano;
-
-    public ListaEnlazada(Nodo<T> cabeza, Nodo<T> cola, int tamano) {
+ 
+    public ListaEnlazada() {
         this.cabeza = null;
         this.cola = null;
         this.tamano = 0;
     }
-
+ 
     public void agregar(T dato) {
         Nodo<T> nuevo = new Nodo<>(dato);
         if (estaVacia()) {
@@ -30,7 +30,7 @@ public class ListaEnlazada<T> implements Iterable<T> {
         }
         tamano++;
     }
-
+ 
     public void agregarAlInicio(T dato) {
         Nodo<T> nuevo = new Nodo<>(dato);
         if (estaVacia()) {
@@ -42,7 +42,7 @@ public class ListaEnlazada<T> implements Iterable<T> {
         }
         tamano++;
     }
-
+ 
     public boolean eliminar(T dato) {
         if (estaVacia()) {
             return false;
@@ -59,6 +59,7 @@ public class ListaEnlazada<T> implements Iterable<T> {
         while (actual.getSiguiente() != null) {
             if (actual.getSiguiente().getDato().equals(dato)) {
                 Nodo<T> aEliminar = actual.getSiguiente();
+                actual.setSiguiente(aEliminar.getSiguiente());
                 if (aEliminar == cola) {
                     cola = actual;
                 }
@@ -69,7 +70,7 @@ public class ListaEnlazada<T> implements Iterable<T> {
         }
         return false;
     }
-
+ 
     public boolean contiene(T dato) {
         Nodo<T> actual = cabeza;
         while (actual != null) {
@@ -80,7 +81,7 @@ public class ListaEnlazada<T> implements Iterable<T> {
         }
         return false;
     }
-
+ 
     public T obtener(int indice) {
         if (indice < 0 || indice >= tamano) {
             throw new IndexOutOfBoundsException("Indice fuera de rango: " + indice);
@@ -91,30 +92,30 @@ public class ListaEnlazada<T> implements Iterable<T> {
         }
         return actual.getDato();
     }
-
+ 
     public boolean estaVacia() {
         return tamano == 0;
     }
-
+ 
     public int tamano() {
         return tamano;
     }
-
+ 
     @Override
     public Iterator<T> iterator() {
         return new Iterator<T>() {
             private Nodo<T> actual = cabeza;
-
+ 
             @Override
             public boolean hasNext() {
                 return actual != null;
             }
-
+ 
             @Override
             public T next() {
                 if (!hasNext()) {
                     throw new NoSuchElementException("No hay mas elementos en la lista.");
-
+ 
                 }
                 T dato = actual.getDato();
                 actual = actual.getSiguiente();
@@ -137,5 +138,5 @@ public class ListaEnlazada<T> implements Iterable<T> {
     sb.append("]");
     return sb.toString();
     }
-
+ 
 }
