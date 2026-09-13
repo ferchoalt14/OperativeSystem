@@ -3,6 +3,7 @@ package operativesystem;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+<<<<<<< Updated upstream
 import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
@@ -51,10 +52,33 @@ public class PantallaInstaPlus extends JPanel {
     private JLabel lblAjenoPosts, lblAjenoFollowers, lblAjenoFollowing;
     private JButton btnAjenoSeguir;
  
+=======
+
+
+public class PantallaInstaPlus extends JPanel implements InstaControlador {
+
+    private final CardLayout cardLayoutRaiz = new CardLayout();
+    private final JPanel panelRaiz = new JPanel(cardLayoutRaiz);
+
+    private final CardLayout cardLayoutApp = new CardLayout();
+    private final JPanel panelSecciones = new JPanel(cardLayoutApp);
+
+    private UsuarioInsta usuarioActual;
+
+    private PanelInstaLogin panelLogin;
+    private PanelInstaRegistro panelRegistro;
+    private PanelInstaFeed panelFeed;
+    private PanelInstaBuscar panelBuscar;
+    private PanelInstaCrearPost panelCrearPost;
+    private PanelInstaPerfil panelPerfil;
+    private PanelInstaPerfilAjeno panelPerfilAjeno;
+
+>>>>>>> Stashed changes
     public PantallaInstaPlus() {
         super(new BorderLayout());
         setOpaque(true);
         setBackground(TemaUI.FONDO);
+<<<<<<< Updated upstream
  
         panelContenedor.setOpaque(false);
         panelContenedor.add(construirPanelLogin(), "LOGIN");
@@ -317,6 +341,40 @@ public class PantallaInstaPlus extends JPanel {
         panelSecciones.add(construirSeccionPerfil(), "PERFIL");
         panelSecciones.add(construirSeccionPerfilAjeno(), "PERFIL_AJENO");
  
+=======
+
+        panelRaiz.setOpaque(false);
+        panelLogin = new PanelInstaLogin(this);
+        panelRegistro = new PanelInstaRegistro(this);
+        panelRaiz.add(panelLogin, "LOGIN");
+        panelRaiz.add(panelRegistro, "REGISTRO");
+        panelRaiz.add(construirPanelApp(), "APP");
+
+        add(panelRaiz, BorderLayout.CENTER);
+        cardLayoutRaiz.show(panelRaiz, "LOGIN");
+    }
+
+    private JPanel construirPanelApp() {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setOpaque(false);
+        panel.add(construirBarraLateral(), BorderLayout.WEST);
+
+        panelFeed = new PanelInstaFeed(this);
+        panelBuscar = new PanelInstaBuscar(this);
+        panelCrearPost = new PanelInstaCrearPost(this);
+        panelPerfil = new PanelInstaPerfil(this);
+        panelPerfilAjeno = new PanelInstaPerfilAjeno(this);
+
+        panelSecciones.setOpaque(false);
+        panelSecciones.add(panelFeed, "FEED");
+        panelSecciones.add(panelBuscar, "BUSCAR");
+        panelSecciones.add(panelCrearPost, "CREAR");
+        panelSecciones.add(construirPanelMensajePlaceholder("✉",
+                "Tu bandeja de entrada está vacía.<br>El Inbox llegará próximamente."), "MENSAJES");
+        panelSecciones.add(panelPerfil, "PERFIL");
+        panelSecciones.add(panelPerfilAjeno, "PERFIL_AJENO");
+
+>>>>>>> Stashed changes
         panel.add(panelSecciones, BorderLayout.CENTER);
         return panel;
     }
@@ -334,6 +392,7 @@ public class PantallaInstaPlus extends JPanel {
         lblLogo.setForeground(TemaUI.ACCENT_OSCURO);
         lblLogo.setBorder(new EmptyBorder(22, 18, 26, 18));
         lblLogo.setAlignmentX(Component.LEFT_ALIGNMENT);
+<<<<<<< Updated upstream
  
         JButton btnInicio = crearBotonNav("🏠", "Inicio", e -> mostrarSeccion("FEED"));
         JButton btnBuscar = crearBotonNav("🔍", "Buscar", e -> mostrarSeccion("BUSCAR"));
@@ -344,6 +403,15 @@ public class PantallaInstaPlus extends JPanel {
             mostrarSeccion("PERFIL");
         });
  
+=======
+
+        JButton btnInicio = crearBotonNav("🏠", "Inicio", e -> { refrescarFeed(); mostrarSeccion("FEED"); });
+        JButton btnBuscar = crearBotonNav("🔍", "Buscar", e -> mostrarSeccion("BUSCAR"));
+        JButton btnCrear = crearBotonNav("➕", "Crear", e -> mostrarSeccion("CREAR"));
+        JButton btnMensajes = crearBotonNav("✉", "Mensajes", e -> mostrarSeccion("MENSAJES"));
+        JButton btnPerfil = crearBotonNav("👤", "Perfil", e -> { refrescarPerfilPropio(); mostrarSeccion("PERFIL"); });
+
+>>>>>>> Stashed changes
         barra.add(lblLogo);
         barra.add(btnInicio);
         barra.add(btnBuscar);
@@ -364,11 +432,7 @@ public class PantallaInstaPlus extends JPanel {
         btnSalir.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
         btnSalir.setBorder(new EmptyBorder(10, 18, 18, 18));
         btnSalir.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnSalir.addActionListener(e -> {
-            usuarioInstaActual = null;
-            txtLoginUsername.setText("");
-            cardLayout.show(panelContenedor, "LOGIN");
-        });
+        btnSalir.addActionListener(e -> cerrarSesion());
         barra.add(btnSalir);
  
         return barra;
@@ -390,11 +454,15 @@ public class PantallaInstaPlus extends JPanel {
         boton.addActionListener(accion);
         return boton;
     }
+<<<<<<< Updated upstream
  
     private void mostrarSeccion(String nombre) {
         cardLayoutApp.show(panelSecciones, nombre);
     }
  
+=======
+
+>>>>>>> Stashed changes
     private JPanel construirPanelMensajePlaceholder(String icono, String mensaje) {
         JPanel panel = new JPanel(new GridBagLayout());
         panel.setOpaque(false);
@@ -405,6 +473,7 @@ public class PantallaInstaPlus extends JPanel {
         panel.add(lbl);
         return panel;
     }
+<<<<<<< Updated upstream
  
     private JPanel construirSeccionFeed() {
         return construirPanelMensajePlaceholder("📷",
@@ -879,5 +948,60 @@ public class PantallaInstaPlus extends JPanel {
                     "No se pudo actualizar el seguimiento: " + ex.getMessage(),
                     "Error", JOptionPane.ERROR_MESSAGE);
         }
+=======
+
+ 
+
+    @Override
+    public void mostrarPantallaRaiz(String nombre) {
+        cardLayoutRaiz.show(panelRaiz, nombre);
+    }
+
+    @Override
+    public void mostrarSeccion(String nombre) {
+        cardLayoutApp.show(panelSecciones, nombre);
+    }
+
+    @Override
+    public void ingresarAlApp(UsuarioInsta usuario) {
+        this.usuarioActual = usuario;
+        refrescarPerfilPropio();
+        refrescarFeed();
+        cardLayoutRaiz.show(panelRaiz, "APP");
+        mostrarSeccion("FEED");
+    }
+
+    @Override
+    public UsuarioInsta getUsuarioActual() {
+        return usuarioActual;
+    }
+
+    @Override
+    public void refrescarPerfilPropio() {
+        panelPerfil.refrescar();
+    }
+
+    @Override
+    public void refrescarFeed() {
+        panelFeed.refrescar();
+    }
+
+    @Override
+    public void refrescarBusqueda() {
+        panelBuscar.ejecutarBusqueda();
+    }
+
+    @Override
+    public void abrirPerfilAjeno(String username, String seccionOrigen) {
+        panelPerfilAjeno.abrir(username, seccionOrigen);
+    }
+
+    @Override
+    public void cerrarSesion() {
+        usuarioActual = null;
+        panelLogin.limpiarUsername();
+        panelLogin.limpiarPassword();
+        cardLayoutRaiz.show(panelRaiz, "LOGIN");
+>>>>>>> Stashed changes
     }
 }

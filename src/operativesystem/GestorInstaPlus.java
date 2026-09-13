@@ -10,12 +10,19 @@ public class GestorInstaPlus {
     private static final String RUTA_INSTA_RAIZ = System.getProperty("user.home") + "/MiniWindowsData/INSTA_RAIZ/";
     private static final String RUTA_INSTA_USERS = RUTA_INSTA_RAIZ + "users_insta.ins";
 
-   
+    
+    private static final String INSTA_PASSWORD_DEFECTO = "Insta#2024";
+
     private static final String[][] CUENTAS_POR_DEFECTO = {
-            {"FC Barcelona", "fcbarcelona", "M"},
-            {"Olivia Rodrigo", "oliviarodrigo", "F"},
-            {"Drake", "drake", "M"},
-            {"Robert Pattinson", "robertpattinson", "M"}
+            {"FC Barcelona", "fcbarcelona", "M", "1450000"},
+            {"Real Madrid C.F.", "realmadrid", "M", "1520000"},
+            {"Olivia Rodrigo", "oliviarodrigo", "F", "980000"},
+            {"Drake", "drake", "M", "2100000"},
+            {"Robert Pattinson", "robertpattinson", "M", "760000"},
+            {"Cristiano Ronaldo", "cristiano", "M", "3200000"},
+            {"Lionel Messi", "leomessi", "M", "3100000"},
+            {"Taylor Swift", "taylorswift", "F", "2800000"},
+            {"Bad Bunny", "badbunny", "M", "2450000"}
     };
 
     private static void asegurarRaiz() {
@@ -40,23 +47,40 @@ public class GestorInstaPlus {
             List<UsuarioInsta> usuarios = cargarUsuarios();
             boolean modificado = false;
             for (String[] datos : CUENTAS_POR_DEFECTO) {
-                boolean existe = false;
+                UsuarioInsta existente = null;
                 for (UsuarioInsta u : usuarios) {
                     if (u.getUsername().equalsIgnoreCase(datos[1])) {
-                        existe = true;
+                        existente = u;
                         break;
                     }
                 }
-                if (!existe) {
-                    UsuarioInsta oficial = new UsuarioInsta(datos[0], datos[2].charAt(0), datos[1], "Insta#2024", 21);
+                int bonus = Integer.parseInt(datos[3]);
+                if (existente == null) {
+                    UsuarioInsta oficial = new UsuarioInsta(datos[0], datos[2].charAt(0), datos[1],
+                            INSTA_PASSWORD_DEFECTO, 21);
+                    oficial.setCuentaOficial(true);
+                    oficial.setSeguidoresBonus(bonus);
                     usuarios.add(oficial);
                     modificado = true;
+                } else if (!existente.isCuentaOficial() || existente.getSeguidoresBonus() != bonus) {
+                    existente.setCuentaOficial(true);
+                    existente.setSeguidoresBonus(bonus);
+                    modificado = true;
                 }
-                
+
                 crearArchivosPersonales(datos[1]);
             }
             if (modificado) {
                 guardarUsuarios(usuarios);
+            }
+
+            // Las cuentas oficiales se siguen todas entre sí.
+            for (String[] datosA : CUENTAS_POR_DEFECTO) {
+                for (String[] datosB : CUENTAS_POR_DEFECTO) {
+                    if (!datosA[1].equalsIgnoreCase(datosB[1])) {
+                        seguirCuenta(datosA[1], datosB[1]);
+                    }
+                }
             }
         } catch (ArchivoCorruptoException | IOException e) {
             System.out.println("No se pudieron preparar las cuentas por defecto de INSTA+: " + e.getMessage());
@@ -225,28 +249,20 @@ public class GestorInstaPlus {
         return cargarListaStrings(new File(rutaCarpetaInsta(username), "followers.ins"));
     }
 
-    @SuppressWarnings("unchecked")
-    private static int contarElementos(File archivo) {
-        if (!archivo.exists()) {
-            return 0;
-        }
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(archivo))) {
-            Object obj = ois.readObject();
-            if (obj instanceof List) {
-                return ((List<?>) obj).size();
-            }
-        } catch (Exception e) {
-           
-        }
-        return 0;
-    }
-
-  
+    
     public static int contarPublicaciones(String username) {
-        return contarElementos(new File(rutaCarpetaInsta(username), "insta.ins"));
+        return GestorPosts.contarPosts(username);
     }
 
-    /** usernameSeguidor empieza a seguir a usernameSeguido (actualiza ambos archivos). */
+    
+    public static int contarFollowersParaMostrar(String username) throws ArchivoCorruptoException {
+        int reales = obtenerFollowers(username).size();
+        UsuarioInsta u = buscarPorUsername(username);
+        int bonus = (u != null) ? u.getSeguidoresBonus() : 0;
+        return reales + bonus;
+    }
+
+   
     public static void seguirCuenta(String usernameSeguidor, String usernameSeguido)
             throws ArchivoCorruptoException, IOException {
         if (usernameSeguidor.equalsIgnoreCase(usernameSeguido)) {

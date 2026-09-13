@@ -17,6 +17,8 @@ public class UsuarioInsta implements Serializable {
     private long fechaRegistro;
     private boolean activa;
     private String rutaFotoPerfil;
+    private boolean cuentaOficial;
+    private int seguidoresBonus;
 
     public UsuarioInsta(String nombreCompleto, char genero, String username, String password, int edad) {
         this.nombreCompleto = nombreCompleto;
@@ -27,6 +29,8 @@ public class UsuarioInsta implements Serializable {
         this.fechaRegistro = System.currentTimeMillis();
         this.activa = true;
         this.rutaFotoPerfil = "";
+        this.cuentaOficial = false;
+        this.seguidoresBonus = 0;
     }
 
     public String getNombreCompleto() { return nombreCompleto; }
@@ -57,4 +61,12 @@ public class UsuarioInsta implements Serializable {
     public String getFechaRegistroTexto() {
         return new SimpleDateFormat("dd/MM/yyyy").format(new Date(this.fechaRegistro));
     }
+
+    
+    public boolean isCuentaOficial() { return cuentaOficial; }
+    public void setCuentaOficial(boolean cuentaOficial) { this.cuentaOficial = cuentaOficial; }
+
+    
+    public int getSeguidoresBonus() { return seguidoresBonus; }
+    public void setSeguidoresBonus(int seguidoresBonus) { this.seguidoresBonus = seguidoresBonus; }
 }
