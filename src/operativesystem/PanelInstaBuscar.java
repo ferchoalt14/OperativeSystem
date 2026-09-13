@@ -6,7 +6,6 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.List;
 
-
 public class PanelInstaBuscar extends JPanel {
 
     private final InstaControlador controlador;
@@ -66,7 +65,7 @@ public class PanelInstaBuscar extends JPanel {
         panelResultados.removeAll();
 
         if (!texto.isEmpty()) {
-            ListaEnlazada<String> coincidencias = new ListaEnlazada<>(null, null, 0);
+            ListaEnlazada<String> coincidencias = new ListaEnlazada<>();
             try {
                 List<UsuarioInsta> usuarios = GestorInstaPlus.cargarUsuarios();
                 for (UsuarioInsta u : usuarios) {

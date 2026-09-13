@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Panel de perfil propio: datos del usuario, stats y lista de cuentas que sigue. */
 public class PanelInstaPerfil extends JPanel {
 
     private final InstaControlador controlador;
@@ -159,8 +158,7 @@ public class PanelInstaPerfil extends JPanel {
                 + (actual.getGenero() == 'F' ? "Femenino" : "Masculino")
                 + " &nbsp;•&nbsp; Se unió el " + actual.getFechaRegistroTexto() + "</html>");
 
-        // La lista de "siguiendo" se recorre con la lista enlazada propia del proyecto.
-        ListaEnlazada<String> lista = new ListaEnlazada<>(null, null, 0);
+        ListaEnlazada<String> lista = new ListaEnlazada<>();
         for (String u : following) {
             lista.agregar(u);
         }

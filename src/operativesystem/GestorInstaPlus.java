@@ -10,7 +10,9 @@ public class GestorInstaPlus {
     private static final String RUTA_INSTA_RAIZ = System.getProperty("user.home") + "/MiniWindowsData/INSTA_RAIZ/";
     private static final String RUTA_INSTA_USERS = RUTA_INSTA_RAIZ + "users_insta.ins";
 
-    
+    // Cuentas "oficiales" precargadas: {nombre completo, username, genero, followers base}
+    // La contraseña de todas es INSTA_PASSWORD_DEFECTO. Se siguen automáticamente entre
+    // sí y todo usuario nuevo las sigue automáticamente al registrarse.
     private static final String INSTA_PASSWORD_DEFECTO = "Insta#2024";
 
     private static final String[][] CUENTAS_POR_DEFECTO = {
@@ -249,12 +251,15 @@ public class GestorInstaPlus {
         return cargarListaStrings(new File(rutaCarpetaInsta(username), "followers.ins"));
     }
 
-    
+    /** Cantidad de publicaciones reales del usuario (delegado a GestorPosts, que es quien las administra). */
     public static int contarPublicaciones(String username) {
         return GestorPosts.contarPosts(username);
     }
 
-    
+    /**
+     * Followers "para mostrar en pantalla": los reales más el bonus de las cuentas
+     * oficiales (para que los famosos se vean con muchos seguidores desde el arranque).
+     */
     public static int contarFollowersParaMostrar(String username) throws ArchivoCorruptoException {
         int reales = obtenerFollowers(username).size();
         UsuarioInsta u = buscarPorUsername(username);
@@ -262,7 +267,7 @@ public class GestorInstaPlus {
         return reales + bonus;
     }
 
-   
+    /** usernameSeguidor empieza a seguir a usernameSeguido (actualiza ambos archivos). */
     public static void seguirCuenta(String usernameSeguidor, String usernameSeguido)
             throws ArchivoCorruptoException, IOException {
         if (usernameSeguidor.equalsIgnoreCase(usernameSeguido)) {
