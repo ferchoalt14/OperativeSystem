@@ -3,57 +3,17 @@
     <editor-bookmarks xmlns="http://www.netbeans.org/ns/editor-bookmarks/2" lastBookmarkId="0"/>
     <open-files xmlns="http://www.netbeans.org/ns/projectui-open-files/2">
         <group>
-<<<<<<< HEAD
-=======
-<<<<<<< HEAD
-<<<<<<< Updated upstream
             <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/Nodo.java</file>
             <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/ListaEnlazada.java</file>
-            <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/PantallaInstaPlus.java</file>
             <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/Lectoretiquetasid3.java</file>
             <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/Reproductormusica.java</file>
             <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/EscritorioPrincipal.java</file>
-<<<<<<< HEAD
             <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/AudioDeviceConVolumen.java</file>
-=======
-=======
-=======
->>>>>>> 02306ea (hola)
->>>>>>> temp-branch
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/ArchivoCorruptoException.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/CuentaDesactivadaException.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PantallaLogin.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/EscritorioPrincipal.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/UsernameDuplicadoException.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/GestorArchivosBinarios.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/Usuario.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/TemaUI.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PantallaInstaPlus.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/GestorInstaPlus.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/UsuarioInsta.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/Main.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/Post.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/GestorPosts.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/InstaControlador.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PanelInstaLogin.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PanelInstaRegistro.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PanelInstaFeed.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PanelInstaCrearPost.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PanelInstaBuscar.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PanelInstaPerfil.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/PanelInstaPerfilAjeno.java</file>
-<<<<<<< HEAD
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/Reproductormusica.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/ListaEnlazada.java</file>
-=======
-<<<<<<< HEAD
->>>>>>> Stashed changes
->>>>>>> 547484fae986a7c2b12615b410a88122eb2d90f7
-=======
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/Reproductormusica.java</file>
-            <file>file:/C:/Users/User/Documents/NetBeansProjects/OperativeSystem/src/operativesystem/ListaEnlazada.java</file>
->>>>>>> 02306ea (hola)
->>>>>>> temp-branch
+            <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/PanelInstaPerfil.java</file>
+            <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/PanelInstaBuscar.java</file>
+            <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/PantallaInstaPlus.java</file>
+            <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/Main.java</file>
+            <file>file:/C:/Users/Atech/Documents/NetBeansProjects/repos/OperativeSystem/OperativeSystem/src/operativesystem/GestorInstaPlus.java</file>
         </group>
     </open-files>
 </project-private>

@@ -1,6 +1,7 @@
 package operativesystem;
 
 import javax.swing.*;
+import javax.swing.InternalFrameFocusTraversalPolicy;
 import java.awt.*;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -12,10 +13,11 @@ import javazoom.jl.player.advanced.AdvancedPlayer;
 import javazoom.jl.player.advanced.PlaybackEvent;
 import javazoom.jl.player.advanced.PlaybackListener;
 
- 
 public class Reproductormusica extends JInternalFrame {
 
-    private enum Estado { DETENIDO, REPRODUCIENDO, PAUSADO }
+    private enum Estado {
+        DETENIDO, REPRODUCIENDO, PAUSADO
+    }
 
     private final ListaEnlazada<File> canciones = new ListaEnlazada<>();
     private final DefaultListModel<File> modeloLista = new DefaultListModel<>();
@@ -36,6 +38,7 @@ public class Reproductormusica extends JInternalFrame {
 
     private volatile float msPorFrame = 26.0f;
     private volatile int msTranscurridos = 0;
+    private volatile int msBaseSesion = 0;
     private volatile boolean detenidoManualmente = false;
 
     public Reproductormusica(File carpetaMusica) {
@@ -47,8 +50,14 @@ public class Reproductormusica extends JInternalFrame {
         cargarCanciones(carpetaMusica);
         construirInterfaz();
         conectarEventos();
-    }
+        addInternalFrameListener(new javax.swing.event.InternalFrameAdapter() {
+            @Override
+            public void internalFrameClosing(javax.swing.event.InternalFrameEvent e) {
+                detener();
+            }
+        });
 
+    }
 
     private void cargarCanciones(File carpetaMusica) {
         File[] archivos = carpetaMusica.listFiles((dir, nombre) -> nombre.toLowerCase().endsWith(".mp3"));
@@ -58,7 +67,7 @@ public class Reproductormusica extends JInternalFrame {
                 canciones.agregar(archivo);
             }
         }
-       
+
         for (File archivo : canciones) {
             modeloLista.addElement(archivo);
         }
@@ -149,8 +158,6 @@ public class Reproductormusica extends JInternalFrame {
         });
     }
 
-
-
     private void alPresionarPlay() {
         if (estado == Estado.PAUSADO && cancionActual != null) {
             reanudar();
@@ -178,18 +185,21 @@ public class Reproductormusica extends JInternalFrame {
         }
     }
 
-
-
     private void reproducirDesdeElInicio(File archivo) {
         detenerReproductorActual();
         cancionActual = archivo;
         msTranscurridos = 0;
+        msBaseSesion = 0;
         msPorFrame = calcularMsPorFrame(archivo);
         iniciarHiloDeReproduccion(0);
         mostrarMetadata(archivo);
     }
 
     private void reanudar() {
+        // Cada nueva sesión de AdvancedPlayer/AudioDevice mide su posición desde
+        // CERO otra vez (no desde el inicio real de la canción). Por eso hay que
+        // recordar en qué milisegundo absoluto arrancamos esta sesión.
+        msBaseSesion = msTranscurridos;
         int frameDeInicio = Math.round(msTranscurridos / msPorFrame);
         iniciarHiloDeReproduccion(frameDeInicio);
     }
@@ -208,7 +218,10 @@ public class Reproductormusica extends JInternalFrame {
         actualizarBotones();
     }
 
-    /** Detiene el AdvancedPlayer actual (si hay uno), marcando que fue algo manual y no el fin natural de la canción. */
+    /**
+     * Detiene el AdvancedPlayer actual (si hay uno), marcando que fue algo
+     * manual y no el fin natural de la canción.
+     */
     private void detenerReproductorActual() {
         detenidoManualmente = true;
         if (reproductorActual != null) {
@@ -245,7 +258,11 @@ public class Reproductormusica extends JInternalFrame {
 
                     @Override
                     public void playbackFinished(PlaybackEvent evento) {
-                        msTranscurridos = evento.getFrame(); // en JLayer esto en realidad son milisegundos transcurridos
+                        // Se suma msBaseSesion porque evento.getFrame() (que en JLayer
+                        // en realidad son ms) es relativo a esta sesión, no al inicio
+                        // real de la canción — sin sumar, cada pausa "olvida" lo ya
+                        // reproducido antes de la última reanudación.
+                        msTranscurridos = msBaseSesion + evento.getFrame();
                         boolean fueManual = detenidoManualmente;
                         detenidoManualmente = false;
                         if (!fueManual) {
@@ -273,7 +290,6 @@ public class Reproductormusica extends JInternalFrame {
         hiloReproduccion.start();
     }
 
-   
     private void alTerminarCancionSola() {
         int indiceActual = modeloLista.indexOf(cancionActual);
         estado = Estado.DETENIDO;
@@ -288,7 +304,6 @@ public class Reproductormusica extends JInternalFrame {
             actualizarBotones();
         }
     }
-
 
     private float calcularMsPorFrame(File archivo) {
         try (FileInputStream flujo = new FileInputStream(archivo)) {
@@ -306,7 +321,6 @@ public class Reproductormusica extends JInternalFrame {
     // ---------------------------------------------------------------
     // Interfaz: carátula y descripción
     // ---------------------------------------------------------------
-
     private void mostrarMetadata(File archivo) {
         Lectoretiquetasid3.Etiquetas etiquetas = Lectoretiquetasid3.leer(archivo);
 

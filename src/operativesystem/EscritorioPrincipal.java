@@ -992,9 +992,10 @@ public class EscritorioPrincipal extends JFrame {
         };
  
         btnCarpeta.addActionListener(e -> {
-            File raiz = obtenerRaizDeTrabajo();
-            
-            JFileChooser chooser = new JFileChooser(raiz.exists() ? raiz : new File(System.getProperty("user.home")));
+            File carpetaImagenes = new File(obtenerRaizDeTrabajo(), "Mis Imágenes");
+            File carpetaInicial = carpetaImagenes.exists() ? carpetaImagenes : obtenerRaizDeTrabajo();
+
+            JFileChooser chooser = new JFileChooser(carpetaInicial);
             
             chooser.setFileSelectionMode(JFileChooser.FILES_AND_DIRECTORIES);
             chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Imagenes (*.png, *.jpg, *.jpeg)", "png", "jpg", "jpeg"));
@@ -1035,14 +1036,6 @@ public class EscritorioPrincipal extends JFrame {
                 actualizarVista.run();
             }
         });
-        
-        File raiz = obtenerRaizDeTrabajo();
-        if (raiz.exists()) {
-            buscarImagenesRecursivo(raiz, imagenes);
-            if (!imagenes.isEmpty()) {
-                indiceActual[0] = 0;
-            }
-        }
         
         JPanel panelSuperior = new JPanel(new BorderLayout());
         panelSuperior.add(lblInfo, BorderLayout.CENTER);
