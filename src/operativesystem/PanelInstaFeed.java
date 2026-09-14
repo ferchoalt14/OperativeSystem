@@ -6,10 +6,7 @@ import java.awt.*;
 import java.io.File;
 import java.util.List;
 
-/**
- * Front page de INSTA+: muestra, ordenadas de más reciente a más vieja,
- * las publicaciones propias y las de todas las cuentas que el usuario sigue.
- */
+
 public class PanelInstaFeed extends JPanel {
 
     private final InstaControlador controlador;
@@ -26,7 +23,7 @@ public class PanelInstaFeed extends JPanel {
         lblTitulo.setForeground(TemaUI.ACCENT_OSCURO);
         lblTitulo.setBorder(new EmptyBorder(0, 4, 14, 0));
 
-        panelPosts = new JPanel();
+        panelPosts = new PanelDesplazable(new BorderLayout());
         panelPosts.setOpaque(false);
         panelPosts.setLayout(new BoxLayout(panelPosts, BoxLayout.Y_AXIS));
 
@@ -63,7 +60,7 @@ public class PanelInstaFeed extends JPanel {
 
         if (feed.isEmpty()) {
             JLabel lblVacio = new JLabel("<html><center>📷<br><br>Aún no hay publicaciones en tu feed.<br>"
-                    + "Sigue cuentas o crea tu primer post desde el menú \"Crear\".</center></html>",
+                    + "Sigue cuentas para empezar a verlas aquí.</center></html>",
                     SwingConstants.CENTER);
             lblVacio.setForeground(TemaUI.TEXTO_SUAVE);
             lblVacio.setAlignmentX(Component.CENTER_ALIGNMENT);

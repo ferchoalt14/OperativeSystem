@@ -79,8 +79,8 @@ public class PanelInstaRegistro extends JPanel {
 
         gbc.gridy = fila; gbc.gridx = 0; gbc.gridwidth = 2;
         JLabel lblAviso = new JLabel(
-                "<html><i>Al registrarte empezarás a seguir automáticamente las<br>"
-                + "cuentas oficiales destacadas de INSTA+ (fútbol y música).<br>"
+                "<html><i>Al registrarte podrás elegir qué cuentas destacadas<br>"
+                + "de INSTA+ seguir (mínimo 4, entre fútbol y música).<br>"
                 + "Podrás elegir tu foto de perfil una vez dentro.</i></html>");
         lblAviso.setFont(lblAviso.getFont().deriveFont(10f));
         lblAviso.setForeground(TemaUI.TEXTO_SUAVE);
@@ -125,10 +125,11 @@ public class PanelInstaRegistro extends JPanel {
         UsuarioInsta nuevo = new UsuarioInsta(nombre, genero, username, password, edad);
 
         try {
-       
+
             GestorInstaPlus.registrarUsuario(nuevo);
             limpiarFormulario();
-            controlador.ingresarAlApp(nuevo); 
+           
+            controlador.mostrarSeleccionSugeridos(nuevo);
 
         } catch (UsernameDuplicadoException ex) {
             JOptionPane.showMessageDialog(this, ex.getMessage(),

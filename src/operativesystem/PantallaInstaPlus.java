@@ -4,17 +4,7 @@ import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
-/**
- * Contenedor raíz del módulo INSTA+.
- *
- * Esta clase ya NO contiene toda la lógica de la app: solo arma la navegación
- * (LOGIN / REGISTRO / APP, y dentro de APP: FEED / BUSCAR / CREAR / MENSAJES /
- * PERFIL / PERFIL_AJENO) y actúa como InstaControlador para que cada panel
- * pueda pedirle acciones sin conocer a los demás paneles.
- *
- * Los datos persisten en disco (ver GestorInstaPlus y GestorPosts), así que
- * las cuentas y las publicaciones se mantienen entre sesiones y nunca se borran solas.
- */
+
 public class PantallaInstaPlus extends JPanel implements InstaControlador {
 
     private final CardLayout cardLayoutRaiz = new CardLayout();
@@ -27,6 +17,7 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
 
     private PanelInstaLogin panelLogin;
     private PanelInstaRegistro panelRegistro;
+    private PanelInstaSeleccionSugeridos panelSugeridos;
     private PanelInstaFeed panelFeed;
     private PanelInstaBuscar panelBuscar;
     private PanelInstaCrearPost panelCrearPost;
@@ -41,8 +32,10 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         panelRaiz.setOpaque(false);
         panelLogin = new PanelInstaLogin(this);
         panelRegistro = new PanelInstaRegistro(this);
+        panelSugeridos = new PanelInstaSeleccionSugeridos(this);
         panelRaiz.add(panelLogin, "LOGIN");
         panelRaiz.add(panelRegistro, "REGISTRO");
+        panelRaiz.add(panelSugeridos, "SUGERIDOS");
         panelRaiz.add(construirPanelApp(), "APP");
 
         add(panelRaiz, BorderLayout.CENTER);
@@ -147,7 +140,7 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         return panel;
     }
 
-    // ------------------- Implementación de InstaControlador -------------------
+  
 
     @Override
     public void mostrarPantallaRaiz(String nombre) {
@@ -166,6 +159,12 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         refrescarFeed();
         cardLayoutRaiz.show(panelRaiz, "APP");
         mostrarSeccion("FEED");
+    }
+
+    @Override
+    public void mostrarSeleccionSugeridos(UsuarioInsta usuario) {
+        panelSugeridos.mostrarPara(usuario);
+        cardLayoutRaiz.show(panelRaiz, "SUGERIDOS");
     }
 
     @Override

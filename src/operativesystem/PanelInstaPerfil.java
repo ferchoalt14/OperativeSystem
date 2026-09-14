@@ -17,6 +17,9 @@ public class PanelInstaPerfil extends JPanel {
     private final JLabel lblUsername;
     private final JLabel lblPosts, lblFollowers, lblFollowing;
     private final JLabel lblDatos;
+
+    private final JPanel panelPublicaciones;
+    private final JPanel panelSeguidoresLista;
     private final JPanel panelSiguiendoLista;
 
     public PanelInstaPerfil(InstaControlador controlador) {
@@ -74,30 +77,38 @@ public class PanelInstaPerfil extends JPanel {
         panelEncabezado.add(lblDatos);
         panelEncabezado.add(Box.createVerticalStrut(10));
         panelEncabezado.add(btnElegirFoto);
-        panelEncabezado.add(Box.createVerticalStrut(20));
+        panelEncabezado.add(Box.createVerticalStrut(16));
 
-        JLabel lblSiguiendoTitulo = new JLabel("Cuentas que sigues");
-        lblSiguiendoTitulo.setFont(new Font("SansSerif", Font.BOLD, 14));
-        lblSiguiendoTitulo.setForeground(TemaUI.ACCENT_OSCURO);
-        lblSiguiendoTitulo.setBorder(new EmptyBorder(0, 2, 8, 0));
+        // --- Pestañas: Publicaciones / Seguidores / Siguiendo ---
+        panelPublicaciones = new PanelDesplazable(new BorderLayout());
+        panelPublicaciones.setOpaque(false);
+        panelPublicaciones.setLayout(new BoxLayout(panelPublicaciones, BoxLayout.Y_AXIS));
 
-        panelSiguiendoLista = new JPanel();
+        panelSeguidoresLista = new PanelDesplazable(new BorderLayout());
+        panelSeguidoresLista.setOpaque(false);
+        panelSeguidoresLista.setLayout(new BoxLayout(panelSeguidoresLista, BoxLayout.Y_AXIS));
+
+        panelSiguiendoLista = new PanelDesplazable(new BorderLayout());
         panelSiguiendoLista.setOpaque(false);
         panelSiguiendoLista.setLayout(new BoxLayout(panelSiguiendoLista, BoxLayout.Y_AXIS));
 
-        JPanel panelSiguiendoContenedor = new JPanel(new BorderLayout());
-        panelSiguiendoContenedor.setOpaque(false);
-        panelSiguiendoContenedor.add(lblSiguiendoTitulo, BorderLayout.NORTH);
-        panelSiguiendoContenedor.add(panelSiguiendoLista, BorderLayout.CENTER);
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.setOpaque(false);
+        tabs.addTab("Publicaciones", envolverEnScroll(panelPublicaciones));
+        tabs.addTab("Seguidores", envolverEnScroll(panelSeguidoresLista));
+        tabs.addTab("Siguiendo", envolverEnScroll(panelSiguiendoLista));
 
-        JScrollPane scroll = new JScrollPane(panelSiguiendoContenedor);
+        add(panelEncabezado, BorderLayout.NORTH);
+        add(tabs, BorderLayout.CENTER);
+    }
+
+    private JScrollPane envolverEnScroll(JPanel contenido) {
+        JScrollPane scroll = new JScrollPane(contenido);
         scroll.setOpaque(false);
         scroll.getViewport().setOpaque(false);
         scroll.setBorder(null);
         scroll.getVerticalScrollBar().setUnitIncrement(14);
-
-        add(panelEncabezado, BorderLayout.NORTH);
-        add(scroll, BorderLayout.CENTER);
+        return scroll;
     }
 
     private JLabel crearEtiquetaStat() {
@@ -140,12 +151,15 @@ public class PanelInstaPerfil extends JPanel {
         }
 
         List<String> following;
+        List<String> followers;
         int followersParaMostrar;
         try {
             following = GestorInstaPlus.obtenerFollowing(actual.getUsername());
+            followers = GestorInstaPlus.obtenerFollowers(actual.getUsername());
             followersParaMostrar = GestorInstaPlus.contarFollowersParaMostrar(actual.getUsername());
         } catch (ArchivoCorruptoException ex) {
             following = new ArrayList<>();
+            followers = new ArrayList<>();
             followersParaMostrar = 0;
         }
         int publicaciones = GestorPosts.contarPosts(actual.getUsername());
@@ -158,27 +172,55 @@ public class PanelInstaPerfil extends JPanel {
                 + (actual.getGenero() == 'F' ? "Femenino" : "Masculino")
                 + " &nbsp;•&nbsp; Se unió el " + actual.getFechaRegistroTexto() + "</html>");
 
-        ListaEnlazada<String> lista = new ListaEnlazada<>();
-        for (String u : following) {
-            lista.agregar(u);
-        }
-
-        panelSiguiendoLista.removeAll();
-        if (lista.estaVacia()) {
-            JLabel lblVacio = new JLabel("Aún no sigues a nadie.");
-            lblVacio.setForeground(TemaUI.TEXTO_SUAVE);
-            panelSiguiendoLista.add(lblVacio);
-        } else {
-            for (String u : lista) {
-                panelSiguiendoLista.add(crearFilaSiguiendo(u));
-                panelSiguiendoLista.add(Box.createVerticalStrut(6));
-            }
-        }
-        panelSiguiendoLista.revalidate();
-        panelSiguiendoLista.repaint();
+        refrescarListaCuentas(panelSeguidoresLista, followers, "Aún no tienes seguidores.");
+        refrescarListaCuentas(panelSiguiendoLista, following, "Aún no sigues a nadie.");
+        refrescarPublicaciones(actual.getUsername());
     }
 
-    private JPanel crearFilaSiguiendo(String username) {
+    private void refrescarListaCuentas(JPanel contenedor, List<String> usuarios, String mensajeVacio) {
+        contenedor.removeAll();
+        if (usuarios.isEmpty()) {
+            JLabel lblVacio = new JLabel(mensajeVacio);
+            lblVacio.setForeground(TemaUI.TEXTO_SUAVE);
+            contenedor.add(lblVacio);
+        } else {
+            for (String u : usuarios) {
+                contenedor.add(crearFilaCuenta(u));
+                contenedor.add(Box.createVerticalStrut(6));
+            }
+        }
+        contenedor.revalidate();
+        contenedor.repaint();
+    }
+
+    private void refrescarPublicaciones(String username) {
+        panelPublicaciones.removeAll();
+        List<Post> posts;
+        try {
+            posts = GestorPosts.cargarPostsDeUsuario(username);
+        } catch (ArchivoCorruptoException ex) {
+            posts = new ArrayList<>();
+        }
+
+        if (posts.isEmpty()) {
+            JLabel lblVacio = new JLabel("<html><center>📷<br><br>Aún no tienes publicaciones.<br>"
+                    + "Crea tu primer post desde el menú \"Crear\".</center></html>", SwingConstants.CENTER);
+            lblVacio.setForeground(TemaUI.TEXTO_SUAVE);
+            lblVacio.setAlignmentX(Component.CENTER_ALIGNMENT);
+            lblVacio.setBorder(new EmptyBorder(30, 0, 0, 0));
+            panelPublicaciones.add(lblVacio);
+        } else {
+            for (Post post : posts) {
+                panelPublicaciones.add(crearTarjetaPost(post));
+                panelPublicaciones.add(Box.createVerticalStrut(14));
+            }
+        }
+
+        panelPublicaciones.revalidate();
+        panelPublicaciones.repaint();
+    }
+
+    private JPanel crearFilaCuenta(String username) {
         JPanel fila = new JPanel(new BorderLayout(10, 0));
         fila.setOpaque(false);
         fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
@@ -198,6 +240,58 @@ public class PanelInstaPerfil extends JPanel {
         fila.add(btnUsername, BorderLayout.CENTER);
 
         return fila;
+    }
+
+    private JPanel crearTarjetaPost(Post post) {
+        JPanel tarjeta = new JPanel(new BorderLayout(0, 8));
+        tarjeta.setBackground(TemaUI.SUPERFICIE);
+        tarjeta.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(TemaUI.BORDE, 1, true),
+                new EmptyBorder(12, 14, 12, 14)));
+        tarjeta.setMaximumSize(new Dimension(Integer.MAX_VALUE, 420));
+        tarjeta.setAlignmentX(Component.LEFT_ALIGNMENT);
+
+        JLabel lblFecha = new JLabel(post.getFechaTexto());
+        lblFecha.setForeground(TemaUI.TEXTO_SUAVE);
+        lblFecha.setFont(new Font("SansSerif", Font.PLAIN, 10));
+
+        JLabel lblImagen;
+        String ruta = post.getRutaImagen();
+        if (ruta != null && !ruta.isBlank() && new File(ruta).exists()) {
+            ImageIcon icono = new ImageIcon(new ImageIcon(ruta).getImage()
+                    .getScaledInstance(360, 280, Image.SCALE_SMOOTH));
+            lblImagen = new JLabel(icono);
+        } else {
+            lblImagen = new JLabel("🖼", SwingConstants.CENTER);
+            lblImagen.setFont(lblImagen.getFont().deriveFont(48f));
+            lblImagen.setPreferredSize(new Dimension(360, 200));
+            lblImagen.setOpaque(true);
+            lblImagen.setBackground(TemaUI.FONDO);
+        }
+        lblImagen.setHorizontalAlignment(SwingConstants.CENTER);
+
+        JTextArea txtCaption = new JTextArea(post.getTexto());
+        txtCaption.setLineWrap(true);
+        txtCaption.setWrapStyleWord(true);
+        txtCaption.setEditable(false);
+        txtCaption.setOpaque(false);
+        txtCaption.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        txtCaption.setForeground(TemaUI.TEXTO);
+
+        JLabel lblLikes = new JLabel("❤ " + post.getLikes() + " likes");
+        lblLikes.setForeground(TemaUI.TEXTO_SUAVE);
+        lblLikes.setFont(new Font("SansSerif", Font.PLAIN, 11));
+
+        JPanel panelInferior = new JPanel(new BorderLayout());
+        panelInferior.setOpaque(false);
+        panelInferior.add(txtCaption, BorderLayout.CENTER);
+        panelInferior.add(lblLikes, BorderLayout.SOUTH);
+
+        tarjeta.add(lblFecha, BorderLayout.NORTH);
+        tarjeta.add(lblImagen, BorderLayout.CENTER);
+        tarjeta.add(panelInferior, BorderLayout.SOUTH);
+
+        return tarjeta;
     }
 
     private void elegirFotoPerfil() {

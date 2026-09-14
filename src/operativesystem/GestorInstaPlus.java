@@ -10,9 +10,6 @@ public class GestorInstaPlus {
     private static final String RUTA_INSTA_RAIZ = System.getProperty("user.home") + "/MiniWindowsData/INSTA_RAIZ/";
     private static final String RUTA_INSTA_USERS = RUTA_INSTA_RAIZ + "users_insta.ins";
 
-    // Cuentas "oficiales" precargadas: {nombre completo, username, genero, followers base}
-    // La contraseña de todas es INSTA_PASSWORD_DEFECTO. Se siguen automáticamente entre
-    // sí y todo usuario nuevo las sigue automáticamente al registrarse.
     private static final String INSTA_PASSWORD_DEFECTO = "Insta#2024";
 
     private static final String[][] CUENTAS_POR_DEFECTO = {
@@ -36,6 +33,11 @@ public class GestorInstaPlus {
 
     public static String rutaCarpetaInsta(String username) {
         return RUTA_INSTA_RAIZ + username + "/";
+    }
+
+  
+    public static String[][] getCuentasPorDefecto() {
+        return CUENTAS_POR_DEFECTO;
     }
 
    
@@ -76,7 +78,7 @@ public class GestorInstaPlus {
                 guardarUsuarios(usuarios);
             }
 
-            // Las cuentas oficiales se siguen todas entre sí.
+         
             for (String[] datosA : CUENTAS_POR_DEFECTO) {
                 for (String[] datosB : CUENTAS_POR_DEFECTO) {
                     if (!datosA[1].equalsIgnoreCase(datosB[1])) {
@@ -87,15 +89,6 @@ public class GestorInstaPlus {
         } catch (ArchivoCorruptoException | IOException e) {
             System.out.println("No se pudieron preparar las cuentas por defecto de INSTA+: " + e.getMessage());
         }
-    }
-
-    private static boolean esCuentaPorDefecto(String username) {
-        for (String[] datos : CUENTAS_POR_DEFECTO) {
-            if (datos[1].equalsIgnoreCase(username)) {
-                return true;
-            }
-        }
-        return false;
     }
 
     @SuppressWarnings("unchecked")
@@ -159,16 +152,7 @@ public class GestorInstaPlus {
         usuarios.add(nuevo);
         guardarUsuarios(usuarios);
         crearArchivosPersonales(nuevo.getUsername());
-        seguirCuentasPorDefecto(nuevo.getUsername());
-    }
-
-    private static void seguirCuentasPorDefecto(String username) throws ArchivoCorruptoException, IOException {
-        if (esCuentaPorDefecto(username)) {
-            return; 
-        }
-        for (String[] datos : CUENTAS_POR_DEFECTO) {
-            seguirCuenta(username, datos[1]);
-        }
+        
     }
 
 
@@ -256,10 +240,7 @@ public class GestorInstaPlus {
         return GestorPosts.contarPosts(username);
     }
 
-    /**
-     * Followers "para mostrar en pantalla": los reales más el bonus de las cuentas
-     * oficiales (para que los famosos se vean con muchos seguidores desde el arranque).
-     */
+    
     public static int contarFollowersParaMostrar(String username) throws ArchivoCorruptoException {
         int reales = obtenerFollowers(username).size();
         UsuarioInsta u = buscarPorUsername(username);
@@ -267,7 +248,7 @@ public class GestorInstaPlus {
         return reales + bonus;
     }
 
-    /** usernameSeguidor empieza a seguir a usernameSeguido (actualiza ambos archivos). */
+  
     public static void seguirCuenta(String usernameSeguidor, String usernameSeguido)
             throws ArchivoCorruptoException, IOException {
         if (usernameSeguidor.equalsIgnoreCase(usernameSeguido)) {
@@ -286,6 +267,14 @@ public class GestorInstaPlus {
         if (!followers.contains(usernameSeguidor)) {
             followers.add(usernameSeguidor);
             guardarListaStrings(archivoFollowers, followers);
+        }
+    }
+
+    
+    public static void seguirVarias(String usernameSeguidor, List<String> usernamesASeguir)
+            throws ArchivoCorruptoException, IOException {
+        for (String usernameSeguido : usernamesASeguir) {
+            seguirCuenta(usernameSeguidor, usernameSeguido);
         }
     }
 

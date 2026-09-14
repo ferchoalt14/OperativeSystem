@@ -73,10 +73,9 @@ public class GestorPosts {
         }
     }
 
- 
+    
     public static List<Post> obtenerFeed(String username) throws ArchivoCorruptoException {
         List<Post> feed = new ArrayList<>();
-        feed.addAll(cargarPostsDeUsuario(username));
 
         List<String> siguiendo = GestorInstaPlus.obtenerFollowing(username);
         for (String cuenta : siguiendo) {

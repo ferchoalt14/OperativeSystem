@@ -42,7 +42,7 @@ public class PanelInstaBuscar extends JPanel {
         panelEncabezado.add(Box.createVerticalStrut(10));
         panelEncabezado.add(panelCampo);
 
-        panelResultados = new JPanel();
+        panelResultados = new PanelDesplazable(new BorderLayout());
         panelResultados.setOpaque(false);
         panelResultados.setLayout(new BoxLayout(panelResultados, BoxLayout.Y_AXIS));
 
