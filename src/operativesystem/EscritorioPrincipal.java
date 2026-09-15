@@ -26,7 +26,6 @@ public class EscritorioPrincipal extends JFrame {
     private File archivoCopiado;
     private boolean esCortar = false;
     private final Map<String, JInternalFrame> ventanasAbiertas = new HashMap<>();
-    private int contadorVentanasInsta = 0;
  
    
     private JPanel panelVentanasTaskbar;
@@ -68,13 +67,6 @@ public class EscritorioPrincipal extends JFrame {
         setMinimumSize(new Dimension(1024, 650));
         setSize(1280, 800);
         setLocationRelativeTo(null);
-
-        // Ícono de la ventana (barra de título / taskbar del SO): usamos el logo de la app
-        // en vez de la tetera de Java por defecto.
-        java.net.URL urlLogo = getClass().getResource("/images/logo.png");
-        if (urlLogo != null) {
-            setIconImage(new ImageIcon(urlLogo).getImage());
-        }
  
         escritorio.setBackground(TemaUI.FONDO);
         panelIconos = construirPanelIconos();
@@ -89,8 +81,6 @@ public class EscritorioPrincipal extends JFrame {
         add(construirBarraSuperior(), BorderLayout.NORTH);
         add(escritorio, BorderLayout.CENTER);
         add(construirBarraTareas(), BorderLayout.SOUTH);
-
-        habilitarArrastreLibreDeVentanas();
  
       
         setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -213,15 +203,16 @@ public class EscritorioPrincipal extends JFrame {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
  
-        panel.add(TemaUI.crearBotonAppConImagen("Explorador", "Archivos.jpg", e -> abrirExplorador()));
-        panel.add(TemaUI.crearBotonAppConImagen("Editor de texto", "word.png", e -> abrirEditorTexto()));
-        panel.add(TemaUI.crearBotonAppConImagen("Visor de imágenes", "galeria.png", e -> abrirVisorImagenes()));
-        panel.add(TemaUI.crearBotonAppConImagen("Consola", "cmd.png", e -> abrirConsola()));
-        panel.add(TemaUI.crearBotonAppConImagen("Reproductor", "Musica.png", e -> abrirReproductor()));
-        panel.add(TemaUI.crearBotonAppConImagen("INSTA+", "insta.png", e -> abrirInstaPlus()));
+        int i = 0;
+        panel.add(TemaUI.crearBotonApp("Explorador", "EX", TemaUI.colorApp(i++), e -> abrirExplorador()));
+        panel.add(TemaUI.crearBotonApp("Editor de texto", "ED", TemaUI.colorApp(i++), e -> abrirEditorTexto()));
+        panel.add(TemaUI.crearBotonApp("Visor de imágenes", "IMG", TemaUI.colorApp(i++), e -> abrirVisorImagenes()));
+        panel.add(TemaUI.crearBotonApp("Consola", "CMD", TemaUI.colorApp(i++), e -> abrirConsola()));
+        panel.add(TemaUI.crearBotonApp("Reproductor", "MUS", TemaUI.colorApp(i++), e -> abrirReproductor()));
+        panel.add(TemaUI.crearBotonApp("INSTA+", "IG", TemaUI.colorApp(i++), e -> abrirInstaPlus()));
  
         if (usuarioActual.isAdministrador()) {
-            panel.add(TemaUI.crearBotonAppConImagen("Administrar usuarios", "admin.png", e -> abrirAdministrarUsuarios()));
+            panel.add(TemaUI.crearBotonApp("Administrar usuarios", "ADM", TemaUI.colorApp(i++), e -> abrirAdministrarUsuarios()));
         }
  
         return panel;
@@ -502,10 +493,6 @@ public class EscritorioPrincipal extends JFrame {
         int confirmar = JOptionPane.showConfirmDialog(this,
                 "¿Cerrar la sesión actual?", "Cerrar sesión", JOptionPane.YES_NO_OPTION);
         if (confirmar == JOptionPane.YES_OPTION) {
-            // Cerrar las ventanas internas (INSTA+ incluida) para liberar sockets y timers de este usuario.
-            for (JInternalFrame abierta : new java.util.ArrayList<>(ventanasAbiertas.values())) {
-                abierta.dispose();
-            }
             dispose();
             SwingUtilities.invokeLater(() -> new PantallaLogin().setVisible(true));
         }
@@ -595,6 +582,9 @@ public class EscritorioPrincipal extends JFrame {
 
         JButton btnBorrar = new JButton("Borrar");
         btnBorrar.addActionListener(e -> borrarArchivo(arbol, ventana, raiz));
+
+        JButton btnOrganizar = new JButton("Organizar carpeta seleccionada");
+        btnOrganizar.addActionListener(e -> organizarCarpetaSeleccionada(arbol, ventana, raiz, btnOrganizar));
  
         cmbOrden.addActionListener(e -> actualizarArbol(arbol, raiz, (String) cmbOrden.getSelectedItem()));
  
@@ -604,6 +594,7 @@ public class EscritorioPrincipal extends JFrame {
         panelBotones.add(btnCopiar);
         panelBotones.add(btnPegar);
         panelBotones.add(btnBorrar);
+        panelBotones.add(btnOrganizar);
         panelBotones.add(new JLabel("Ordenar: "));
         panelBotones.add(cmbOrden);
  
@@ -833,7 +824,9 @@ public class EscritorioPrincipal extends JFrame {
     }
  
     /**
-     * Borra un archivo o carpeta (recursivamente si es carpeta)
+     * Borra un archivo o carpeta (recursivamente si es carpeta), pidiendo
+     * confirmación antes — a diferencia de cortar/copiar/pegar, esta acción no
+     * se puede deshacer, así que el diálogo de confirmación no es opcional.
      */
     private void borrarArchivo(JTree arbol, JInternalFrame ventana, File raiz) {
         File seleccion = obtenerArchivoSeleccionado(arbol);
@@ -884,6 +877,99 @@ public class EscritorioPrincipal extends JFrame {
             }
         }
         return archivo.delete();
+    }
+
+    /**
+     * Clasifica los archivos SUELTOS de la carpeta seleccionada (no entra a
+     * subcarpetas) en imagenes/musica/documentos/otros, cada una como
+     * subcarpeta dentro de la carpeta seleccionada.
+     *
+     * Corre en su propio Thread porque recorrer y mover archivos es una
+     * operación de disco que puede tardar en una carpeta grande — si esto
+     * corriera en el hilo de Swing, la ventana entera del explorador (y el
+     * resto de la interfaz) se congelaría hasta que termine. El hilo nunca
+     * toca el JTree directamente: solo prepara los datos, y la actualización
+     * de la interfaz al final se pide con SwingUtilities.invokeLater, igual
+     * que hace el reproductor de música al terminar una canción.
+     */
+    private void organizarCarpetaSeleccionada(JTree arbol, JInternalFrame ventana, File raiz, JButton boton) {
+        File carpetaSeleccionada = obtenerArchivoSeleccionado(arbol);
+        if (carpetaSeleccionada == null || !carpetaSeleccionada.isDirectory()) {
+            JOptionPane.showMessageDialog(ventana, "Selecciona una carpeta para organizar.");
+            return;
+        }
+        if (!estaDentroDeRaiz(carpetaSeleccionada, raiz)) {
+            JOptionPane.showMessageDialog(ventana, "No puedes organizar algo fuera de tu carpeta de usuario.",
+                    "Explorador", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        boton.setEnabled(false); // evita lanzar dos organizaciones a la vez sobre la misma carpeta
+
+        Thread hiloOrganizador = new Thread(() -> {
+            // Cada categoría se arma con TU lista enlazada, no con ArrayList —
+            // aquí es literalmente el lugar que sugiere el enunciado para usarla.
+            ListaEnlazada<File> imagenes = new ListaEnlazada<>();
+            ListaEnlazada<File> musica = new ListaEnlazada<>();
+            ListaEnlazada<File> documentos = new ListaEnlazada<>();
+            ListaEnlazada<File> otros = new ListaEnlazada<>();
+
+            File[] archivos = carpetaSeleccionada.listFiles(File::isFile);
+            if (archivos != null) {
+                for (File archivo : archivos) {
+                    String nombre = archivo.getName().toLowerCase();
+                    if (nombre.endsWith(".png") || nombre.endsWith(".jpg") || nombre.endsWith(".jpeg")
+                            || nombre.endsWith(".gif") || nombre.endsWith(".bmp") || nombre.endsWith(".webp")) {
+                        imagenes.agregar(archivo);
+                    } else if (nombre.endsWith(".mp3") || nombre.endsWith(".wav") || nombre.endsWith(".flac")) {
+                        musica.agregar(archivo);
+                    } else if (nombre.endsWith(".txt") || nombre.endsWith(".pdf") || nombre.endsWith(".docx")
+                            || nombre.endsWith(".doc") || nombre.endsWith(".xlsx") || nombre.endsWith(".pptx")) {
+                        documentos.agregar(archivo);
+                    } else {
+                        otros.agregar(archivo);
+                    }
+                }
+            }
+
+            int movidos = moverCategoria(carpetaSeleccionada, "imagenes", imagenes)
+                    + moverCategoria(carpetaSeleccionada, "musica", musica)
+                    + moverCategoria(carpetaSeleccionada, "documentos", documentos)
+                    + moverCategoria(carpetaSeleccionada, "otros", otros);
+
+            SwingUtilities.invokeLater(() -> {
+                boton.setEnabled(true);
+                actualizarArbol(arbol, raiz, "Nombre");
+                if (movidos == 0) {
+                    JOptionPane.showMessageDialog(ventana,
+                            "No había archivos sueltos para organizar en esta carpeta.");
+                } else {
+                    JOptionPane.showMessageDialog(ventana, "Se organizaron " + movidos + " archivo(s).");
+                }
+            });
+        }, "organizador-archivos");
+
+        hiloOrganizador.start();
+    }
+
+    /** Mueve todos los archivos de una ListaEnlazada a su subcarpeta de categoría. Devuelve cuántos se movieron. */
+    private int moverCategoria(File carpetaBase, String categoria, ListaEnlazada<File> archivos) {
+        if (archivos.estaVacia()) {
+            return 0;
+        }
+        File carpetaDestino = new File(carpetaBase, categoria);
+        carpetaDestino.mkdirs();
+        int movidos = 0;
+        for (File archivo : archivos) { // recorrido con for-each gracias a que ListaEnlazada implementa Iterable
+            try {
+                Files.move(archivo.toPath(), nombreDisponible(carpetaDestino, archivo.getName()).toPath());
+                movidos++;
+            } catch (IOException ignored) {
+                // Si un archivo puntual falla (ej. está abierto en otro programa),
+                // seguimos con los demás en vez de abortar toda la organización.
+            }
+        }
+        return movidos;
     }
 
     private void copiarRecursivamente(File origen, File destino) throws IOException {
@@ -1411,49 +1497,19 @@ public class EscritorioPrincipal extends JFrame {
     }
  
     private void abrirInstaPlus() {
-        // Cada clic en el logo abre una ventana NUEVA e independiente de INSTA+, para poder
-        // tener varias cuentas abiertas a la vez (por ejemplo, para probar la mensajería en
-        // tiempo real entre dos cuentas). Por eso ya no reutilizamos una única ventana con
-        // la clave fija "instaplus": cada ventana obtiene su propia clave.
-        contadorVentanasInsta++;
-        String claveVentana = "instaplus" + contadorVentanasInsta;
-
-        String titulo = "INSTA+ #" + contadorVentanasInsta;
-
-        JInternalFrame ventana = new JInternalFrame(titulo, true, true, true, true);
-
-        // Tamaño más chico que el escritorio (no ocupa toda la pantalla) para que, si se abren
-        // varias ventanas, entren varias visibles a la vez y no se tapen por completo unas a otras.
-        int ancho = 720, alto = 580;
-        ventana.setSize(ancho, alto);
+        if (traerAlFrenteSiExiste("instaplus")) {
+            return;
+        }
+ 
+        JInternalFrame ventana = new JInternalFrame("INSTA+", true, true, true, true);
+        ventana.setSize(760, 600);
         ventana.setLayout(new BorderLayout());
-
-        // Cascada: cada ventana nueva nace un poco más abajo y a la derecha que la anterior,
-        // en vez de nacer todas en el mismo (0,0) tapándose exactamente entre sí.
-        int anchoEscritorio = Math.max(escritorio.getWidth(), ancho + 40);
-        int altoEscritorio = Math.max(escritorio.getHeight(), alto + 40);
-        int pasosX = Math.max(1, (anchoEscritorio - ancho) / 36);
-        int pasosY = Math.max(1, (altoEscritorio - alto) / 36);
-        int paso = (contadorVentanasInsta - 1) % Math.max(1, Math.min(pasosX, pasosY));
-        ventana.setLocation(24 + paso * 36, 24 + paso * 36);
-
-        // Cada ventana necesita su propia "identidad" de sesión para que el inicio de sesión
-        // guardado (auto-login) de una no pise el de la otra: si ambas usaran el mismo
-        // usuarioActual.getUsername(), compartirían el mismo archivo de sesión y terminarían
-        // mostrando siempre la misma cuenta.
-        String identidadSesion = usuarioActual.getUsername() + "#" + claveVentana;
-
-        PantallaInstaPlus panelInstaPlus = new PantallaInstaPlus(identidadSesion);
+ 
+        
+        PantallaInstaPlus panelInstaPlus = new PantallaInstaPlus();
         ventana.add(panelInstaPlus, BorderLayout.CENTER);
-        // Al cerrar la ventana se desconecta el socket de ESA ventana únicamente.
-        ventana.addInternalFrameListener(new javax.swing.event.InternalFrameAdapter() {
-            @Override
-            public void internalFrameClosed(javax.swing.event.InternalFrameEvent e) {
-                panelInstaPlus.liberarRecursos();
-            }
-        });
-
-        mostrarVentanaInterna(claveVentana, ventana);
+ 
+        mostrarVentanaInterna("instaplus", ventana);
     }
  
     private void abrirAdministrarUsuarios() {
@@ -1600,95 +1656,5 @@ public class EscritorioPrincipal extends JFrame {
         } catch (java.beans.PropertyVetoException ignored) {
         }
         marcarBotonTaskbarActivo(clave);
-    }
-
-    // ------------------------------------------------------------------
-    // Permite arrastrar cualquier ventana interna tocando/clicando en
-    // CUALQUIER parte de su contenido, no solo la barrita de título de
-    // arriba. Usamos UN SOLO listener global (registrado una vez) en vez de
-    // engancharlo componente por componente, porque así también funciona en
-    // contenido que se agrega después dinámicamente (posts del feed,
-    // conversaciones, comentarios, etc. que se cargan al refrescar).
-    //
-    // Mientras se arrastra, Swing sigue mandando los eventos MOUSE_DRAGGED /
-    // MOUSE_RELEASED al mismo componente donde se hizo el MOUSE_PRESSED
-    // (aunque el mouse se mueva sobre otros componentes), así que podemos
-    // seguir el arrastre de forma confiable.
-    // ------------------------------------------------------------------
-    private JInternalFrame ventanaEnArrastre;
-    private Point inicioArrastreEnEscritorio;
-    private Point ubicacionInicialVentanaArrastrada;
-
-    private void habilitarArrastreLibreDeVentanas() {
-        Toolkit.getDefaultToolkit().addAWTEventListener(this::gestionarArrastreLibreDeVentanas,
-                AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
-    }
-
-    private void gestionarArrastreLibreDeVentanas(java.awt.AWTEvent evento) {
-        if (!(evento instanceof java.awt.event.MouseEvent)) {
-            return;
-        }
-        java.awt.event.MouseEvent e = (java.awt.event.MouseEvent) evento;
-        Component origen = e.getComponent();
-        if (origen == null) {
-            return;
-        }
-
-        switch (e.getID()) {
-            case java.awt.event.MouseEvent.MOUSE_PRESSED: {
-                if (esControlInteractivo(origen)) {
-                    return;
-                }
-                JInternalFrame ventana = (JInternalFrame) SwingUtilities.getAncestorOfClass(JInternalFrame.class, origen);
-                if (ventana == null || ventana.getParent() != escritorio) {
-                    return;
-                }
-                ventanaEnArrastre = ventana;
-                inicioArrastreEnEscritorio = SwingUtilities.convertPoint(origen, e.getPoint(), escritorio);
-                ubicacionInicialVentanaArrastrada = ventana.getLocation();
-                try {
-                    if (ventana.isIcon()) {
-                        ventana.setIcon(false);
-                    }
-                    ventana.setSelected(true);
-                } catch (java.beans.PropertyVetoException ignored) {
-                }
-                break;
-            }
-            case java.awt.event.MouseEvent.MOUSE_DRAGGED: {
-                if (ventanaEnArrastre == null) {
-                    return;
-                }
-                Point actual = SwingUtilities.convertPoint(origen, e.getPoint(), escritorio);
-                int dx = actual.x - inicioArrastreEnEscritorio.x;
-                int dy = actual.y - inicioArrastreEnEscritorio.y;
-                ventanaEnArrastre.setLocation(ubicacionInicialVentanaArrastrada.x + dx,
-                        ubicacionInicialVentanaArrastrada.y + dy);
-                break;
-            }
-            case java.awt.event.MouseEvent.MOUSE_RELEASED: {
-                ventanaEnArrastre = null;
-                inicioArrastreEnEscritorio = null;
-                ubicacionInicialVentanaArrastrada = null;
-                break;
-            }
-            default:
-                break;
-        }
-    }
-
-    /** Controles con los que el usuario ya interactúa normalmente: aquí NO se debe iniciar el arrastre. */
-    private boolean esControlInteractivo(Component c) {
-        return c instanceof AbstractButton
-                || c instanceof javax.swing.text.JTextComponent
-                || c instanceof JComboBox
-                || c instanceof JSpinner
-                || c instanceof JSlider
-                || c instanceof JScrollBar
-                || c instanceof JList
-                || c instanceof JTable
-                || c instanceof JTree
-                || c instanceof JTabbedPane
-                || c instanceof JProgressBar;
     }
 }
