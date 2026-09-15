@@ -39,9 +39,7 @@ public class GestorNotificaciones {
         if (!carpeta.exists()) {
             carpeta.mkdirs();
         }
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(archivoDe(username)))) {
-            oos.writeObject(new ArrayList<Object>(lista));
-        }
+        ArchivosInsta.guardarObjeto(archivoDe(username), new ArrayList<Object>(lista));
     }
 
     public static void agregarNotificacion(String usernameDestino, TipoNotificacion tipo, String usernameOrigen,
@@ -51,7 +49,7 @@ public class GestorNotificaciones {
         lista.add(0, new Notificacion(tipo, usernameOrigen, mensaje, usernameAutorPost, postId));
         // conservar solo las últimas 100 para no crecer indefinidamente
         if (lista.size() > 100) {
-            lista = lista.subList(0, 100);
+            lista = new ArrayList<>(lista.subList(0, 100));
         }
         guardar(usernameDestino, lista);
     }

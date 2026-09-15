@@ -26,6 +26,7 @@ public class EscritorioPrincipal extends JFrame {
     private File archivoCopiado;
     private boolean esCortar = false;
     private final Map<String, JInternalFrame> ventanasAbiertas = new HashMap<>();
+    private int contadorVentanasInsta = 0;
  
    
     private JPanel panelVentanasTaskbar;
@@ -67,6 +68,13 @@ public class EscritorioPrincipal extends JFrame {
         setMinimumSize(new Dimension(1024, 650));
         setSize(1280, 800);
         setLocationRelativeTo(null);
+
+        // Ícono de la ventana (barra de título / taskbar del SO): usamos el logo de la app
+        // en vez de la tetera de Java por defecto.
+        java.net.URL urlLogo = getClass().getResource("/images/logo.png");
+        if (urlLogo != null) {
+            setIconImage(new ImageIcon(urlLogo).getImage());
+        }
  
         escritorio.setBackground(TemaUI.FONDO);
         panelIconos = construirPanelIconos();
@@ -81,6 +89,8 @@ public class EscritorioPrincipal extends JFrame {
         add(construirBarraSuperior(), BorderLayout.NORTH);
         add(escritorio, BorderLayout.CENTER);
         add(construirBarraTareas(), BorderLayout.SOUTH);
+
+        habilitarArrastreLibreDeVentanas();
  
       
         setExtendedState(JFrame.MAXIMIZED_BOTH);
@@ -203,16 +213,15 @@ public class EscritorioPrincipal extends JFrame {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
  
-        int i = 0;
-        panel.add(TemaUI.crearBotonApp("Explorador", "EX", TemaUI.colorApp(i++), e -> abrirExplorador()));
-        panel.add(TemaUI.crearBotonApp("Editor de texto", "ED", TemaUI.colorApp(i++), e -> abrirEditorTexto()));
-        panel.add(TemaUI.crearBotonApp("Visor de imágenes", "IMG", TemaUI.colorApp(i++), e -> abrirVisorImagenes()));
-        panel.add(TemaUI.crearBotonApp("Consola", "CMD", TemaUI.colorApp(i++), e -> abrirConsola()));
-        panel.add(TemaUI.crearBotonApp("Reproductor", "MUS", TemaUI.colorApp(i++), e -> abrirReproductor()));
-        panel.add(TemaUI.crearBotonApp("INSTA+", "IG", TemaUI.colorApp(i++), e -> abrirInstaPlus()));
+        panel.add(TemaUI.crearBotonAppConImagen("Explorador", "Archivos.jpg", e -> abrirExplorador()));
+        panel.add(TemaUI.crearBotonAppConImagen("Editor de texto", "word.png", e -> abrirEditorTexto()));
+        panel.add(TemaUI.crearBotonAppConImagen("Visor de imágenes", "galeria.png", e -> abrirVisorImagenes()));
+        panel.add(TemaUI.crearBotonAppConImagen("Consola", "cmd.png", e -> abrirConsola()));
+        panel.add(TemaUI.crearBotonAppConImagen("Reproductor", "Musica.png", e -> abrirReproductor()));
+        panel.add(TemaUI.crearBotonAppConImagen("INSTA+", "insta.png", e -> abrirInstaPlus()));
  
         if (usuarioActual.isAdministrador()) {
-            panel.add(TemaUI.crearBotonApp("Administrar usuarios", "ADM", TemaUI.colorApp(i++), e -> abrirAdministrarUsuarios()));
+            panel.add(TemaUI.crearBotonAppConImagen("Administrar usuarios", "admin.png", e -> abrirAdministrarUsuarios()));
         }
  
         return panel;
@@ -493,6 +502,10 @@ public class EscritorioPrincipal extends JFrame {
         int confirmar = JOptionPane.showConfirmDialog(this,
                 "¿Cerrar la sesión actual?", "Cerrar sesión", JOptionPane.YES_NO_OPTION);
         if (confirmar == JOptionPane.YES_OPTION) {
+            // Cerrar las ventanas internas (INSTA+ incluida) para liberar sockets y timers de este usuario.
+            for (JInternalFrame abierta : new java.util.ArrayList<>(ventanasAbiertas.values())) {
+                abierta.dispose();
+            }
             dispose();
             SwingUtilities.invokeLater(() -> new PantallaLogin().setVisible(true));
         }
@@ -1398,19 +1411,49 @@ public class EscritorioPrincipal extends JFrame {
     }
  
     private void abrirInstaPlus() {
-        if (traerAlFrenteSiExiste("instaplus")) {
-            return;
-        }
- 
-        JInternalFrame ventana = new JInternalFrame("INSTA+", true, true, true, true);
-        ventana.setSize(760, 600);
+        // Cada clic en el logo abre una ventana NUEVA e independiente de INSTA+, para poder
+        // tener varias cuentas abiertas a la vez (por ejemplo, para probar la mensajería en
+        // tiempo real entre dos cuentas). Por eso ya no reutilizamos una única ventana con
+        // la clave fija "instaplus": cada ventana obtiene su propia clave.
+        contadorVentanasInsta++;
+        String claveVentana = "instaplus" + contadorVentanasInsta;
+
+        String titulo = "INSTA+ #" + contadorVentanasInsta;
+
+        JInternalFrame ventana = new JInternalFrame(titulo, true, true, true, true);
+
+        // Tamaño más chico que el escritorio (no ocupa toda la pantalla) para que, si se abren
+        // varias ventanas, entren varias visibles a la vez y no se tapen por completo unas a otras.
+        int ancho = 720, alto = 580;
+        ventana.setSize(ancho, alto);
         ventana.setLayout(new BorderLayout());
- 
-        
-        PantallaInstaPlus panelInstaPlus = new PantallaInstaPlus();
+
+        // Cascada: cada ventana nueva nace un poco más abajo y a la derecha que la anterior,
+        // en vez de nacer todas en el mismo (0,0) tapándose exactamente entre sí.
+        int anchoEscritorio = Math.max(escritorio.getWidth(), ancho + 40);
+        int altoEscritorio = Math.max(escritorio.getHeight(), alto + 40);
+        int pasosX = Math.max(1, (anchoEscritorio - ancho) / 36);
+        int pasosY = Math.max(1, (altoEscritorio - alto) / 36);
+        int paso = (contadorVentanasInsta - 1) % Math.max(1, Math.min(pasosX, pasosY));
+        ventana.setLocation(24 + paso * 36, 24 + paso * 36);
+
+        // Cada ventana necesita su propia "identidad" de sesión para que el inicio de sesión
+        // guardado (auto-login) de una no pise el de la otra: si ambas usaran el mismo
+        // usuarioActual.getUsername(), compartirían el mismo archivo de sesión y terminarían
+        // mostrando siempre la misma cuenta.
+        String identidadSesion = usuarioActual.getUsername() + "#" + claveVentana;
+
+        PantallaInstaPlus panelInstaPlus = new PantallaInstaPlus(identidadSesion);
         ventana.add(panelInstaPlus, BorderLayout.CENTER);
- 
-        mostrarVentanaInterna("instaplus", ventana);
+        // Al cerrar la ventana se desconecta el socket de ESA ventana únicamente.
+        ventana.addInternalFrameListener(new javax.swing.event.InternalFrameAdapter() {
+            @Override
+            public void internalFrameClosed(javax.swing.event.InternalFrameEvent e) {
+                panelInstaPlus.liberarRecursos();
+            }
+        });
+
+        mostrarVentanaInterna(claveVentana, ventana);
     }
  
     private void abrirAdministrarUsuarios() {
@@ -1557,5 +1600,95 @@ public class EscritorioPrincipal extends JFrame {
         } catch (java.beans.PropertyVetoException ignored) {
         }
         marcarBotonTaskbarActivo(clave);
+    }
+
+    // ------------------------------------------------------------------
+    // Permite arrastrar cualquier ventana interna tocando/clicando en
+    // CUALQUIER parte de su contenido, no solo la barrita de título de
+    // arriba. Usamos UN SOLO listener global (registrado una vez) en vez de
+    // engancharlo componente por componente, porque así también funciona en
+    // contenido que se agrega después dinámicamente (posts del feed,
+    // conversaciones, comentarios, etc. que se cargan al refrescar).
+    //
+    // Mientras se arrastra, Swing sigue mandando los eventos MOUSE_DRAGGED /
+    // MOUSE_RELEASED al mismo componente donde se hizo el MOUSE_PRESSED
+    // (aunque el mouse se mueva sobre otros componentes), así que podemos
+    // seguir el arrastre de forma confiable.
+    // ------------------------------------------------------------------
+    private JInternalFrame ventanaEnArrastre;
+    private Point inicioArrastreEnEscritorio;
+    private Point ubicacionInicialVentanaArrastrada;
+
+    private void habilitarArrastreLibreDeVentanas() {
+        Toolkit.getDefaultToolkit().addAWTEventListener(this::gestionarArrastreLibreDeVentanas,
+                AWTEvent.MOUSE_EVENT_MASK | AWTEvent.MOUSE_MOTION_EVENT_MASK);
+    }
+
+    private void gestionarArrastreLibreDeVentanas(java.awt.AWTEvent evento) {
+        if (!(evento instanceof java.awt.event.MouseEvent)) {
+            return;
+        }
+        java.awt.event.MouseEvent e = (java.awt.event.MouseEvent) evento;
+        Component origen = e.getComponent();
+        if (origen == null) {
+            return;
+        }
+
+        switch (e.getID()) {
+            case java.awt.event.MouseEvent.MOUSE_PRESSED: {
+                if (esControlInteractivo(origen)) {
+                    return;
+                }
+                JInternalFrame ventana = (JInternalFrame) SwingUtilities.getAncestorOfClass(JInternalFrame.class, origen);
+                if (ventana == null || ventana.getParent() != escritorio) {
+                    return;
+                }
+                ventanaEnArrastre = ventana;
+                inicioArrastreEnEscritorio = SwingUtilities.convertPoint(origen, e.getPoint(), escritorio);
+                ubicacionInicialVentanaArrastrada = ventana.getLocation();
+                try {
+                    if (ventana.isIcon()) {
+                        ventana.setIcon(false);
+                    }
+                    ventana.setSelected(true);
+                } catch (java.beans.PropertyVetoException ignored) {
+                }
+                break;
+            }
+            case java.awt.event.MouseEvent.MOUSE_DRAGGED: {
+                if (ventanaEnArrastre == null) {
+                    return;
+                }
+                Point actual = SwingUtilities.convertPoint(origen, e.getPoint(), escritorio);
+                int dx = actual.x - inicioArrastreEnEscritorio.x;
+                int dy = actual.y - inicioArrastreEnEscritorio.y;
+                ventanaEnArrastre.setLocation(ubicacionInicialVentanaArrastrada.x + dx,
+                        ubicacionInicialVentanaArrastrada.y + dy);
+                break;
+            }
+            case java.awt.event.MouseEvent.MOUSE_RELEASED: {
+                ventanaEnArrastre = null;
+                inicioArrastreEnEscritorio = null;
+                ubicacionInicialVentanaArrastrada = null;
+                break;
+            }
+            default:
+                break;
+        }
+    }
+
+    /** Controles con los que el usuario ya interactúa normalmente: aquí NO se debe iniciar el arrastre. */
+    private boolean esControlInteractivo(Component c) {
+        return c instanceof AbstractButton
+                || c instanceof javax.swing.text.JTextComponent
+                || c instanceof JComboBox
+                || c instanceof JSpinner
+                || c instanceof JSlider
+                || c instanceof JScrollBar
+                || c instanceof JList
+                || c instanceof JTable
+                || c instanceof JTree
+                || c instanceof JTabbedPane
+                || c instanceof JProgressBar;
     }
 }

@@ -3,31 +3,45 @@ package operativesystem;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-import java.io.File;
-import java.util.List;
-
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.util.HashMap;
+import java.util.Map;
 
 public class PanelInstaFeed extends JPanel {
 
     private final InstaControlador controlador;
     private final JPanel panelPosts;
+    private final JScrollPane scroll;
+
+    /** Referencias a los controles de cada tarjeta para actualizarlas en vivo (eventos del socket). */
+    private final Map<String, Tarjeta> tarjetas = new HashMap<>();
+
+    private static final class Tarjeta {
+        JButton btnLike;
+        JLabel lblLikes;
+        JButton btnComentarios;
+    }
 
     public PanelInstaFeed(InstaControlador controlador) {
         super(new BorderLayout());
         this.controlador = controlador;
         setOpaque(false);
-        setBorder(new EmptyBorder(20, 26, 20, 26));
+        setBorder(new EmptyBorder(20, 26, 0, 26));
 
-        JLabel lblTitulo = new JLabel("Inicio");
-        lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 20));
-        lblTitulo.setForeground(TemaUI.ACCENT_OSCURO);
+        JLabel lblTitulo = EstiloInsta.etiqueta("Inicio", 22, true, TemaUI.ACCENT_OSCURO);
         lblTitulo.setBorder(new EmptyBorder(0, 4, 14, 0));
 
-        panelPosts = new PanelDesplazable(new BorderLayout());
+        panelPosts = new JPanel();
         panelPosts.setOpaque(false);
         panelPosts.setLayout(new BoxLayout(panelPosts, BoxLayout.Y_AXIS));
+        panelPosts.setBorder(new EmptyBorder(0, 0, 20, 0));
 
-        JScrollPane scroll = new JScrollPane(panelPosts);
+        JPanel envoltorio = new PanelDesplazable(new BorderLayout());
+        envoltorio.setOpaque(false);
+        envoltorio.add(panelPosts, BorderLayout.NORTH);
+
+        scroll = new JScrollPane(envoltorio);
         scroll.setOpaque(false);
         scroll.getViewport().setOpaque(false);
         scroll.setBorder(null);
@@ -37,9 +51,15 @@ public class PanelInstaFeed extends JPanel {
         add(scroll, BorderLayout.CENTER);
     }
 
+    private static String clave(String autor, String postId) {
+        return autor.toLowerCase() + "|" + postId;
+    }
+
     /** Vuelve a cargar el feed desde disco y redibuja las tarjetas de posts. */
     public void refrescar() {
+        int posicion = scroll.getVerticalScrollBar().getValue();
         panelPosts.removeAll();
+        tarjetas.clear();
         UsuarioInsta actual = controlador.getUsuarioActual();
 
         if (actual == null) {
@@ -52,160 +72,162 @@ public class PanelInstaFeed extends JPanel {
         try {
             feed = GestorPosts.obtenerFeed(actual.getUsername());
         } catch (ArchivoCorruptoException ex) {
-            panelPosts.add(new JLabel("No se pudo cargar el feed."));
+            JLabel error = EstiloInsta.etiqueta("No se pudo cargar el feed: " + ex.getMessage(), 12, false, EstiloInsta.ROJO);
+            error.setAlignmentX(Component.CENTER_ALIGNMENT);
+            panelPosts.add(error);
             panelPosts.revalidate();
             panelPosts.repaint();
             return;
         }
 
         if (feed.estaVacia()) {
-            JLabel lblVacio = new JLabel("<html><center>📷<br><br>Aún no hay publicaciones en tu feed.<br>"
-                    + "Sigue cuentas para empezar a verlas aquí.</center></html>",
-                    SwingConstants.CENTER);
+            JPanel vacio = EstiloInsta.filaAjustada(new GridBagLayout());
+            vacio.setAlignmentX(Component.CENTER_ALIGNMENT);
+            vacio.setBorder(new EmptyBorder(60, 0, 0, 0));
+            JLabel lblVacio = new JLabel("<html><center><font size='7'>📷</font><br><br>Aún no hay publicaciones en tu feed.<br>"
+                    + "Sigue cuentas para empezar a verlas aquí.</center></html>", SwingConstants.CENTER);
             lblVacio.setForeground(TemaUI.TEXTO_SUAVE);
-            lblVacio.setAlignmentX(Component.CENTER_ALIGNMENT);
-            lblVacio.setBorder(new EmptyBorder(40, 0, 0, 0));
-            panelPosts.add(lblVacio);
+            vacio.add(lblVacio);
+            panelPosts.add(vacio);
         } else {
             for (Post post : feed) {
-                panelPosts.add(crearTarjetaPost(post));
-                panelPosts.add(Box.createVerticalStrut(14));
+                panelPosts.add(crearTarjetaPost(post, actual));
+                panelPosts.add(Box.createVerticalStrut(16));
             }
         }
 
         panelPosts.revalidate();
         panelPosts.repaint();
+        SwingUtilities.invokeLater(() -> scroll.getVerticalScrollBar().setValue(posicion));
     }
 
-    private JPanel crearTarjetaPost(Post post) {
-        JPanel tarjeta = new JPanel(new BorderLayout(0, 8));
-        tarjeta.setBackground(TemaUI.SUPERFICIE);
-        tarjeta.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(TemaUI.BORDE, 1, true),
-                new EmptyBorder(12, 14, 12, 14)));
-        tarjeta.setMaximumSize(new Dimension(Integer.MAX_VALUE, 420));
-        tarjeta.setAlignmentX(Component.LEFT_ALIGNMENT);
+    /** Actualiza likes y comentarios de una tarjeta sin redibujar todo el feed. */
+    public void actualizarPost(String autor, String postId) {
+        Tarjeta t = tarjetas.get(clave(autor, postId));
+        UsuarioInsta actual = controlador.getUsuarioActual();
+        if (t == null || actual == null) {
+            return;
+        }
+        try {
+            Post p = GestorPosts.obtenerPostPorId(autor, postId);
+            if (p == null) {
+                refrescar();
+                return;
+            }
+            pintarLike(t, p.estaLikeadoPor(actual.getUsername()), p.getLikes());
+            t.btnComentarios.setText("💬 " + p.getComentarios().size());
+        } catch (ArchivoCorruptoException ex) {
+            // se actualizará en el próximo refresco
+        }
+    }
 
-        JPanel encabezado = new JPanel(new BorderLayout(8, 0));
+    private static void pintarLike(Tarjeta t, boolean likeado, int likes) {
+        t.btnLike.setText(likeado ? "♥" : "♡");
+        t.btnLike.setForeground(likeado ? EstiloInsta.LIKE_ACTIVO : EstiloInsta.LIKE_INACTIVO);
+        t.lblLikes.setText(String.format("%,d me gusta", likes));
+    }
+
+    private JPanel crearTarjetaPost(Post post, UsuarioInsta actual) {
+        EstiloInsta.PanelRedondeado tarjeta = new EstiloInsta.PanelRedondeado(
+                new BorderLayout(0, 10), TemaUI.SUPERFICIE, TemaUI.BORDE, 18) {
+            @Override
+            public Dimension getMaximumSize() {
+                return new Dimension(560, getPreferredSize().height);
+            }
+        };
+        tarjeta.setBorder(new EmptyBorder(12, 14, 12, 14));
+        tarjeta.setAlignmentX(Component.CENTER_ALIGNMENT);
+
+        // Encabezado
+        JPanel encabezado = new JPanel(new BorderLayout(10, 0));
         encabezado.setOpaque(false);
-        JLabel lblAvatar = new JLabel(AvatarHelper.avatarPara(post.getUsernameAutor(), 34));
-        JButton btnUsername = new JButton("@" + post.getUsernameAutor());
-        btnUsername.setContentAreaFilled(false);
-        btnUsername.setBorderPainted(false);
-        btnUsername.setFocusPainted(false);
-        btnUsername.setForeground(TemaUI.TEXTO);
-        btnUsername.setFont(new Font("SansSerif", Font.BOLD, 13));
+        JLabel lblAvatar = new JLabel(AvatarHelper.avatarPara(post.getUsernameAutor(), 36));
+        JButton btnUsername = EstiloInsta.botonTexto("@" + post.getUsernameAutor(), TemaUI.TEXTO, 13, true);
         btnUsername.setHorizontalAlignment(SwingConstants.LEFT);
-        btnUsername.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnUsername.setBorder(new EmptyBorder(0, 0, 0, 0));
         btnUsername.addActionListener(e -> controlador.abrirPerfilAjeno(post.getUsernameAutor(), "FEED"));
-        JLabel lblFecha = new JLabel(post.getFechaTexto());
-        lblFecha.setForeground(TemaUI.TEXTO_SUAVE);
-        lblFecha.setFont(new Font("SansSerif", Font.PLAIN, 10));
+        JLabel lblFecha = EstiloInsta.etiqueta(post.getFechaTexto(), 10, false, TemaUI.TEXTO_SUAVE);
 
         JPanel panelNombreFecha = new JPanel(new GridLayout(2, 1));
         panelNombreFecha.setOpaque(false);
-        panelNombreFecha.add(btnUsername);
+        JPanel filaNombre = new JPanel(new FlowLayout(FlowLayout.LEFT, 0, 0));
+        filaNombre.setOpaque(false);
+        filaNombre.add(btnUsername);
+        panelNombreFecha.add(filaNombre);
         panelNombreFecha.add(lblFecha);
 
         encabezado.add(lblAvatar, BorderLayout.WEST);
         encabezado.add(panelNombreFecha, BorderLayout.CENTER);
 
-        JLabel lblImagen;
-        String ruta = post.getRutaImagen();
-        if (ruta != null && !ruta.isBlank() && new File(ruta).exists()) {
-            ImageIcon icono = new ImageIcon(new ImageIcon(ruta).getImage()
-                    .getScaledInstance(360, 280, Image.SCALE_SMOOTH));
-            lblImagen = new JLabel(icono);
+        // Imagen
+        JComponent vistaImagen;
+        ImageIcon imagen = EstiloInsta.imagenAjustada(post.getRutaImagen(), 520, 420);
+        if (imagen != null) {
+            JLabel lblImagen = new JLabel(imagen, SwingConstants.CENTER);
+            vistaImagen = lblImagen;
         } else {
-            lblImagen = new JLabel("🖼", SwingConstants.CENTER);
-            lblImagen.setFont(lblImagen.getFont().deriveFont(48f));
-            lblImagen.setPreferredSize(new Dimension(360, 200));
-            lblImagen.setOpaque(true);
-            lblImagen.setBackground(TemaUI.FONDO);
+            EstiloInsta.PanelRedondeado placeholder = new EstiloInsta.PanelRedondeado(
+                    new GridBagLayout(), EstiloInsta.mezclar(TemaUI.SUPERFICIE, TemaUI.TEXTO, 0.05), null, 14);
+            placeholder.setPreferredSize(new Dimension(360, 150));
+            JLabel ico = new JLabel("🖼");
+            ico.setFont(ico.getFont().deriveFont(40f));
+            ico.setForeground(TemaUI.TEXTO_SUAVE);
+            placeholder.add(ico);
+            vistaImagen = placeholder;
         }
-        lblImagen.setHorizontalAlignment(SwingConstants.CENTER);
-
-        JTextArea txtCaption = new JTextArea(post.getTexto());
-        txtCaption.setLineWrap(true);
-        txtCaption.setWrapStyleWord(true);
-        txtCaption.setEditable(false);
-        txtCaption.setOpaque(false);
-        txtCaption.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        txtCaption.setForeground(TemaUI.TEXTO);
-
-        UsuarioInsta actual = controlador.getUsuarioActual();
-        boolean leDiLike = actual != null && post.estaLikeadoPor(actual.getUsername());
-
-        JButton btnLike = new JButton("♥");
-        btnLike.setFont(btnLike.getFont().deriveFont(Font.BOLD, 18f));
-        btnLike.setForeground(leDiLike ? new Color(220, 40, 80) : new Color(190, 190, 190));
-        btnLike.setContentAreaFilled(false);
-        btnLike.setBorderPainted(false);
-        btnLike.setFocusPainted(false);
-        btnLike.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-
-        JLabel lblLikes = new JLabel("♥ " + post.getLikes() + " likes");
-        lblLikes.setForeground(TemaUI.TEXTO_SUAVE);
-        lblLikes.setFont(new Font("SansSerif", Font.PLAIN, 11));
-
-        btnLike.addActionListener(e -> {
-            if (actual == null) {
-                return;
-            }
-            try {
-                GestorPosts.alternarLike(post.getUsernameAutor(), post.getId(), actual.getUsername());
-                Post actualizado = GestorPosts.obtenerPostPorId(post.getUsernameAutor(), post.getId());
-                if (actualizado != null) {
-                    boolean ahora = actualizado.estaLikeadoPor(actual.getUsername());
-                    btnLike.setForeground(ahora ? new Color(220, 40, 80) : new Color(190, 190, 190));
-                    lblLikes.setText("♥ " + actualizado.getLikes() + " likes");
-                }
-            } catch (ArchivoCorruptoException | java.io.IOException ex) {
-                JOptionPane.showMessageDialog(this, "No se pudo actualizar el like: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+        vistaImagen.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        vistaImagen.addMouseListener(new MouseAdapter() {
+            @Override
+            public void mouseClicked(MouseEvent e) {
+                controlador.abrirPost(post, () -> actualizarPost(post.getUsernameAutor(), post.getId()));
             }
         });
 
-        JButton btnComentar = new JButton("💬 Comentar");
-        btnComentar.setContentAreaFilled(false);
-        btnComentar.setBorderPainted(false);
-        btnComentar.setFocusPainted(false);
-        btnComentar.setForeground(TemaUI.TEXTO_SUAVE);
-        btnComentar.setFont(new Font("SansSerif", Font.PLAIN, 11));
-        btnComentar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        btnComentar.addActionListener(e -> abrirDialogoDesde(post));
+        // Acciones
+        Tarjeta refs = new Tarjeta();
+        refs.btnLike = EstiloInsta.botonTexto("♡", EstiloInsta.LIKE_INACTIVO, 22, true);
+        refs.lblLikes = EstiloInsta.etiqueta("", 12, true, TemaUI.TEXTO);
+        pintarLike(refs, post.estaLikeadoPor(actual.getUsername()), post.getLikes());
+        refs.btnLike.addActionListener(e -> alternarLike(post, refs));
 
-        JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        refs.btnComentarios = EstiloInsta.botonTexto("💬 " + post.getComentarios().size(), TemaUI.TEXTO_SUAVE, 12, false);
+        refs.btnComentarios.setToolTipText("Ver y escribir comentarios");
+        refs.btnComentarios.addActionListener(e ->
+                controlador.abrirPost(post, () -> actualizarPost(post.getUsernameAutor(), post.getId())));
+        tarjetas.put(clave(post.getUsernameAutor(), post.getId()), refs);
+
+        JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.LEFT, 2, 0));
         panelAcciones.setOpaque(false);
-        panelAcciones.add(btnLike);
-        panelAcciones.add(lblLikes);
-        panelAcciones.add(Box.createHorizontalStrut(10));
-        panelAcciones.add(btnComentar);
+        panelAcciones.add(refs.btnLike);
+        panelAcciones.add(refs.lblLikes);
+        panelAcciones.add(Box.createHorizontalStrut(14));
+        panelAcciones.add(refs.btnComentarios);
 
-        JPanel panelInferior = new JPanel(new BorderLayout());
+        JPanel panelInferior = new JPanel(new BorderLayout(0, 4));
         panelInferior.setOpaque(false);
-        panelInferior.add(txtCaption, BorderLayout.CENTER);
-        panelInferior.add(panelAcciones, BorderLayout.SOUTH);
+        panelInferior.add(panelAcciones, BorderLayout.NORTH);
+        if (post.getTexto() != null && !post.getTexto().isBlank()) {
+            panelInferior.add(EstiloInsta.textoAjustable(post.getTexto(), 13, TemaUI.TEXTO), BorderLayout.CENTER);
+        }
 
         tarjeta.add(encabezado, BorderLayout.NORTH);
-        tarjeta.add(lblImagen, BorderLayout.CENTER);
+        tarjeta.add(vistaImagen, BorderLayout.CENTER);
         tarjeta.add(panelInferior, BorderLayout.SOUTH);
-
-        lblImagen.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        lblImagen.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                abrirDialogoDesde(post);
-            }
-        });
-
         return tarjeta;
     }
 
-    private void abrirDialogoDesde(Post post) {
-        Window ventana = SwingUtilities.getWindowAncestor(this);
-        Frame marco = (ventana instanceof Frame) ? (Frame) ventana : null;
-        DialogoPost dialogo = new DialogoPost(marco, controlador, post, this::refrescar);
-        dialogo.setVisible(true);
+    private void alternarLike(Post post, Tarjeta refs) {
+        if (controlador.getUsuarioActual() == null) {
+            return;
+        }
+        refs.btnLike.setEnabled(false);
+        controlador.enviarAlServidor(PaqueteInsta.like(post.getUsernameAutor(), post.getId()), r -> {
+            refs.btnLike.setEnabled(true);
+            if (!r.esOk()) {
+                controlador.mostrarAviso("No se pudo dar me gusta", r.getError());
+                return;
+            }
+            pintarLike(refs, r.getBool(PaqueteInsta.LIKEADO), r.getInt(PaqueteInsta.LIKES));
+        });
     }
 }

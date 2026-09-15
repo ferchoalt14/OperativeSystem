@@ -8,8 +8,8 @@ public class Mensaje implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private final String remitente;
-    private final String destinatario;
+    private String remitente;
+    private String destinatario;
     private final String texto;
     private final long fecha;
     private boolean leido;
@@ -28,6 +28,20 @@ public class Mensaje implements Serializable {
     public long getFecha() { return fecha; }
     public boolean isLeido() { return leido; }
     public void setLeido(boolean leido) { this.leido = leido; }
+
+    /** Usado al cambiar un username. */
+    void renombrarUsuario(String viejo, String nuevo) {
+        if (remitente != null && remitente.equalsIgnoreCase(viejo)) {
+            remitente = nuevo;
+        }
+        if (destinatario != null && destinatario.equalsIgnoreCase(viejo)) {
+            destinatario = nuevo;
+        }
+    }
+
+    public String getDiaTexto() {
+        return new SimpleDateFormat("dd/MM/yyyy").format(new Date(fecha));
+    }
 
     public String getHoraTexto() {
         return new SimpleDateFormat("HH:mm").format(new Date(fecha));

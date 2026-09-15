@@ -54,7 +54,7 @@ public class UsuarioInsta implements Serializable {
     public boolean isActiva() { return activa; }
     public void setActiva(boolean activa) { this.activa = activa; }
 
-    public String getRutaFotoPerfil() { return rutaFotoPerfil; }
+    public String getRutaFotoPerfil() { return rutaFotoPerfil != null ? rutaFotoPerfil : ""; }
     public void setRutaFotoPerfil(String rutaFotoPerfil) {
         this.rutaFotoPerfil = rutaFotoPerfil != null ? rutaFotoPerfil : "";
     }
@@ -71,7 +71,7 @@ public class UsuarioInsta implements Serializable {
     public int getSeguidoresBonus() { return seguidoresBonus; }
     public void setSeguidoresBonus(int seguidoresBonus) { this.seguidoresBonus = seguidoresBonus; }
     
-        public String getDescripcion() { return descripcion; }
+        public String getDescripcion() { return descripcion != null ? descripcion : ""; }
     public void setDescripcion(String descripcion) {
         this.descripcion = descripcion != null ? descripcion : "";
     }

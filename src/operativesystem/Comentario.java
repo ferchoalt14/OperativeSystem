@@ -9,7 +9,7 @@ public class Comentario implements Serializable {
 
     private static final long serialVersionUID = 1L;
 
-    private final String usernameAutor;
+    private String usernameAutor;
     private final String texto;
     private final long fecha;
 
@@ -22,6 +22,11 @@ public class Comentario implements Serializable {
     public String getUsernameAutor() { return usernameAutor; }
     public String getTexto() { return texto; }
     public long getFecha() { return fecha; }
+
+    /** Usado al cambiar un username. */
+    void renombrarAutor(String nuevo) {
+        this.usernameAutor = nuevo;
+    }
 
     public String getFechaTexto() {
         return new SimpleDateFormat("dd/MM/yyyy HH:mm").format(new Date(fecha));

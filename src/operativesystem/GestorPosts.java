@@ -44,9 +44,7 @@ public class GestorPosts {
         if (!carpeta.exists()) {
             carpeta.mkdirs();
         }
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(archivoPostsDe(username)))) {
-            oos.writeObject(new ArrayList<Object>(posts));
-        }
+        ArchivosInsta.guardarObjeto(archivoPostsDe(username), new ArrayList<Object>(posts));
     }
 
     
@@ -192,5 +190,41 @@ public class GestorPosts {
         }
         resultado.ordenarPor(Comparator.comparingLong(Post::getFechaPublicacion).reversed());
         return resultado;
+    }
+
+    /** Actualiza autor de posts y de comentarios cuando un usuario cambia su username. */
+    static void renombrarUsuarioEnPosts(String viejo, String nuevo, List<UsuarioInsta> usuarios)
+            throws ArchivoCorruptoException, IOException {
+        for (UsuarioInsta u : usuarios) {
+            String dueno = u.getUsername().equalsIgnoreCase(viejo) ? nuevo : u.getUsername();
+            List<Post> posts = cargarPostsDeUsuario(dueno);
+            boolean cambio = false;
+            for (Post p : posts) {
+                if (p.getUsernameAutor() != null && p.getUsernameAutor().equalsIgnoreCase(viejo)) {
+                    cambiarAutor(p, nuevo);
+                    cambio = true;
+                }
+                for (Comentario c : p.getComentarios()) {
+                    if (c.getUsernameAutor() != null && c.getUsernameAutor().equalsIgnoreCase(viejo)) {
+                        c.renombrarAutor(nuevo);
+                        cambio = true;
+                    }
+                }
+            }
+            if (cambio) {
+                guardarPostsDeUsuario(dueno, posts);
+            }
+        }
+    }
+
+    /** Post no expone un setter de autor, así que se actualiza el campo por reflexión. */
+    private static void cambiarAutor(Post post, String nuevoAutor) {
+        try {
+            java.lang.reflect.Field campo = Post.class.getDeclaredField("usernameAutor");
+            campo.setAccessible(true);
+            campo.set(post, nuevoAutor);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            System.out.println("No se pudo actualizar el autor del post " + post.getId() + ": " + e.getMessage());
+        }
     }
 }
