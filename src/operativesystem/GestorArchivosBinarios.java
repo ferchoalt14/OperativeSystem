@@ -7,7 +7,8 @@ import java.util.List;
 public class GestorArchivosBinarios {
     
     private static final String RUTA_RAIZ = System.getProperty("user.home") + "/MiniWindowsData/";
-    private static final String RUTA_USERS = RUTA_RAIZ + "users.ins";
+    private static final String RUTA_USERS = RUTA_RAIZ + "usuarios" + ArchivosInsta.EXTENSION;
+    private static final String RUTA_USERS_ANTERIOR = RUTA_RAIZ + "users.ins";
 
     public static void inicializarSistema() {
         File raiz = new File(RUTA_RAIZ);
@@ -15,8 +16,9 @@ public class GestorArchivosBinarios {
             raiz.mkdirs();
         }
         File file = new File(RUTA_USERS);
+        migrarArchivoUsuariosAnterior(file);
         if (!file.exists()) {
-            crearAdminPorDefecto(); 
+            crearAdminPorDefecto();
         } else {
             
             try {
@@ -29,22 +31,26 @@ public class GestorArchivosBinarios {
                     }
                 }
                 if (modificado) guardarUsuarios(usuarios);
-            } catch (Exception e) {
-               
+            } catch (ArchivoCorruptoException | IOException e) {
+                System.out.println("No se pudo verificar la activación del administrador: " + e.getMessage());
             }
         }
     }
 
+    @SuppressWarnings("unchecked")
     public static List<Usuario> cargarUsuarios() throws ArchivoCorruptoException {
         List<Usuario> usuarios = new ArrayList<>();
         File file = new File(RUTA_USERS);
         if (!file.exists()) {
-            crearAdminPorDefecto(); 
+            crearAdminPorDefecto();
         }
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
-            usuarios = (List<Usuario>) ois.readObject();
+        try {
+            Object obj = ArchivosInsta.leerObjeto(file);
+            if (obj instanceof List) {
+                usuarios = (List<Usuario>) obj;
+            }
         } catch (EOFException e) {
-            
+            // archivo vacío: se conserva una lista vacía
         } catch (Exception e) {
             throw new ArchivoCorruptoException(file.getName(), e);
         }
@@ -52,8 +58,17 @@ public class GestorArchivosBinarios {
     }
 
     private static void guardarUsuarios(List<Usuario> usuarios) throws IOException {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(RUTA_USERS))) {
-            oos.writeObject(usuarios);
+        ArchivosInsta.guardarObjeto(new File(RUTA_USERS), new ArrayList<Object>(usuarios));
+    }
+
+    private static void migrarArchivoUsuariosAnterior(File destino) {
+        File anterior = new File(RUTA_USERS_ANTERIOR);
+        if (!destino.exists() && anterior.exists()) {
+            try {
+                java.nio.file.Files.move(anterior.toPath(), destino.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                System.out.println("No se pudo migrar users.ins a usuarios.sop: " + e.getMessage());
+            }
         }
     }
 

@@ -37,6 +37,8 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
     private final AvisoFlotanteInsta aviso = new AvisoFlotanteInsta();
 
     private ClienteInsta cliente;
+    private volatile boolean hiloInboxActivo;
+    private Thread hiloRevisionInbox;
 
     public PantallaInstaPlus(String usuarioSO) {
         super(new BorderLayout());
@@ -193,6 +195,7 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         this.usuarioActual = usuario;
         GestorInstaPlus.guardarSesion(usuarioSO, usuario);
         conectarCliente();
+        iniciarRevisionNotificacionesInbox();
         refrescarPerfilPropio();
         refrescarFeed();
         refrescarMensajes();
@@ -224,8 +227,50 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         cliente.conectar();
     }
 
+    /** Revisa periódicamente las notificaciones binarias sin bloquear el hilo de Swing. */
+    private void iniciarRevisionNotificacionesInbox() {
+        detenerRevisionNotificacionesInbox();
+        hiloInboxActivo = true;
+        hiloRevisionInbox = new Thread(() -> {
+            int anterior = -1;
+            while (hiloInboxActivo && usuarioActual != null) {
+                try {
+                    int actual = GestorNotificaciones.contarNoLeidas(usuarioActual.getUsername());
+                    if (actual != anterior) {
+                        anterior = actual;
+                        int total = actual;
+                        SwingUtilities.invokeLater(() -> actualizarNotificacionesInbox(total));
+                    }
+                    Thread.sleep(2500L);
+                } catch (ArchivoCorruptoException ex) {
+                    // La interfaz no se bloquea si un archivo está temporalmente ocupado/corrupto.
+                    try {
+                        Thread.sleep(2500L);
+                    } catch (InterruptedException ie) {
+                        Thread.currentThread().interrupt();
+                        break;
+                    }
+                } catch (InterruptedException ex) {
+                    Thread.currentThread().interrupt();
+                    break;
+                }
+            }
+        }, "hilo-revision-notificaciones-inbox");
+        hiloRevisionInbox.setDaemon(true);
+        hiloRevisionInbox.start();
+    }
+
+    private void detenerRevisionNotificacionesInbox() {
+        hiloInboxActivo = false;
+        if (hiloRevisionInbox != null) {
+            hiloRevisionInbox.interrupt();
+            hiloRevisionInbox = null;
+        }
+    }
+
     /** Llamar cuando se cierra la ventana de INSTA+ (la sesión queda guardada para este usuario del SO). */
     public void liberarRecursos() {
+        detenerRevisionNotificacionesInbox();
         if (cliente != null) {
             cliente.desconectar();
             cliente = null;
@@ -478,6 +523,13 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
     @Override
     public void mostrarAviso(String titulo, String texto) {
         aviso.mostrar(null, titulo, texto, null);
+    }
+
+    @Override
+    public void actualizarNotificacionesInbox(int noLeidas) {
+        if (panelMensajes != null) {
+            panelMensajes.actualizarNotificaciones(noLeidas);
+        }
     }
 
     @Override

@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
 /**
- * Servidor de INSTA+ basado en sockets TCP (localhost).
+ * Servidor de INSTA+ basado en sockets TCP.
  *
  * Todo lo que es "tiempo real" pasa por aquí: mensajes directos, lecturas (✓✓), comentarios,
  * likes, publicaciones nuevas, eliminaciones y menciones. El servidor guarda en disco usando los
@@ -44,12 +44,12 @@ public final class ServidorInsta {
             return true;
         }
         try {
-            ServerSocket ss = new ServerSocket(PUERTO, 50, InetAddress.getLoopbackAddress());
+            ServerSocket ss = new ServerSocket(PUERTO, 50, null);
             instancia = new ServidorInsta(ss);
             Thread hilo = new Thread(instancia::aceptarConexiones, "insta-servidor");
             hilo.setDaemon(true);
             hilo.start();
-            System.out.println("[INSTA+] Servidor de sockets escuchando en el puerto " + PUERTO);
+            System.out.println("[INSTA+] Servidor de sockets escuchando en todas las interfaces, puerto " + PUERTO);
             return true;
         } catch (IOException e) {
             // Puerto ocupado: normalmente otra instancia del sistema ya es el servidor.

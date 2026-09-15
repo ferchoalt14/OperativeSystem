@@ -12,7 +12,36 @@ import java.nio.file.StandardCopyOption;
  */
 final class ArchivosInsta {
 
+    /** Extensión propia utilizada por la persistencia binaria del sistema. */
+    static final String EXTENSION = ".sop";
+
     private ArchivosInsta() {
+    }
+
+    /** Guarda una cadena en binario usando DataOutputStream. */
+    static void guardarCadena(File destino, String valor) throws IOException {
+        File carpeta = destino.getAbsoluteFile().getParentFile();
+        if (carpeta != null && !carpeta.exists()) {
+            carpeta.mkdirs();
+        }
+        try (DataOutputStream dos = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(destino)))) {
+            dos.writeUTF(valor == null ? "" : valor);
+        }
+    }
+
+    /** Lee una cadena guardada con guardarCadena. */
+    static String leerCadena(File origen) throws IOException {
+        try (DataInputStream dis = new DataInputStream(new BufferedInputStream(new FileInputStream(origen)))) {
+            return dis.readUTF();
+        }
+    }
+
+    /** Lee un objeto Java serializado desde un archivo binario. */
+    static Object leerObjeto(File origen) throws IOException, ClassNotFoundException {
+        try (ObjectInputStream ois = new ObjectInputStream(
+                new BufferedInputStream(new FileInputStream(origen)))) {
+            return ois.readObject();
+        }
     }
 
     static void guardarObjeto(File destino, Object objeto) throws IOException {

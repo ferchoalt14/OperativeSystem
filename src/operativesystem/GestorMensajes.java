@@ -22,8 +22,8 @@ public class GestorMensajes {
         String u1 = usuarioA.toLowerCase();
         String u2 = usuarioB.toLowerCase();
         String nombre = (u1.compareTo(u2) <= 0)
-                ? "conv_" + u1 + "__" + u2 + ".ins"
-                : "conv_" + u2 + "__" + u1 + ".ins";
+                ? "conv_" + u1 + "__" + u2 + ArchivosInsta.EXTENSION
+                : "conv_" + u2 + "__" + u1 + ArchivosInsta.EXTENSION;
         return new File(RUTA_CONVERSACIONES, nombre);
     }
 
@@ -35,8 +35,8 @@ public class GestorMensajes {
         if (!archivo.exists()) {
             return mensajes;
         }
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(archivo))) {
-            Object obj = ois.readObject();
+        try {
+            Object obj = ArchivosInsta.leerObjeto(archivo);
             if (obj instanceof List) {
                 for (Object o : (List<?>) obj) {
                     if (o instanceof Mensaje) {
@@ -100,7 +100,7 @@ public class GestorMensajes {
         asegurarCarpeta();
         String prefijo = "conv_";
         File carpeta = new File(RUTA_CONVERSACIONES);
-        File[] archivos = carpeta.listFiles((dir, nombre) -> nombre.startsWith(prefijo) && nombre.endsWith(".ins"));
+        File[] archivos = carpeta.listFiles((dir, nombre) -> nombre.startsWith(prefijo) && nombre.endsWith(ArchivosInsta.EXTENSION));
 
         List<String> otros = new ArrayList<>();
         List<Long> ultimaFecha = new ArrayList<>();
@@ -108,7 +108,7 @@ public class GestorMensajes {
         if (archivos != null) {
             String buscado = username.toLowerCase();
             for (File archivo : archivos) {
-                String nombreSinExt = archivo.getName().substring(prefijo.length(), archivo.getName().length() - 4);
+                String nombreSinExt = archivo.getName().substring(prefijo.length(), archivo.getName().length() - ArchivosInsta.EXTENSION.length());
                 String[] partes = nombreSinExt.split("__");
                 if (partes.length != 2) {
                     continue;

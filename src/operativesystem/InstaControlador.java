@@ -46,4 +46,7 @@ public interface InstaControlador {
 
     /** Muestra una notificación dentro de la ventana de INSTA+ (no es una ventana emergente). */
     void mostrarAviso(String titulo, String texto);
+
+    /** Actualiza el contador de notificaciones no leídas dentro del Inbox. */
+    void actualizarNotificacionesInbox(int noLeidas);
 }

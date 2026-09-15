@@ -12,7 +12,7 @@ public class GestorPosts {
     private static final Random RANDOM_LIKES = new Random();
 
     private static File archivoPostsDe(String username) {
-        return new File(GestorInstaPlus.rutaCarpetaInsta(username), "insta.ins");
+        return new File(GestorInstaPlus.rutaCarpetaInsta(username), "insta" + ArchivosInsta.EXTENSION);
     }
 
     @SuppressWarnings("unchecked")
@@ -22,8 +22,8 @@ public class GestorPosts {
         if (!archivo.exists()) {
             return posts;
         }
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(archivo))) {
-            Object obj = ois.readObject();
+        try {
+            Object obj = ArchivosInsta.leerObjeto(archivo);
             if (obj instanceof List) {
                 for (Object o : (List<?>) obj) {
                     if (o instanceof Post) {

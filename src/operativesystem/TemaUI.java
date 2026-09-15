@@ -205,6 +205,9 @@ public final class TemaUI {
     public static Icon crearIconoCircularDeRecurso(String nombreRecurso, int diametro) {
         java.net.URL url = TemaUI.class.getResource("/images/" + nombreRecurso);
         Image imagen = (url != null) ? new ImageIcon(url).getImage() : null;
+        if (url == null) {
+            System.err.println("[UI] Recurso no encontrado en classpath: /images/" + nombreRecurso);
+        }
         return new Icon() {
             @Override
             public void paintIcon(Component c, Graphics g, int x, int y) {

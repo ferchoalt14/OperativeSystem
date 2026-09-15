@@ -203,16 +203,15 @@ public class EscritorioPrincipal extends JFrame {
         panel.setOpaque(false);
         panel.setBorder(BorderFactory.createEmptyBorder(24, 24, 24, 24));
  
-        int i = 0;
-        panel.add(TemaUI.crearBotonApp("Explorador", "EX", TemaUI.colorApp(i++), e -> abrirExplorador()));
-        panel.add(TemaUI.crearBotonApp("Editor de texto", "ED", TemaUI.colorApp(i++), e -> abrirEditorTexto()));
-        panel.add(TemaUI.crearBotonApp("Visor de imágenes", "IMG", TemaUI.colorApp(i++), e -> abrirVisorImagenes()));
-        panel.add(TemaUI.crearBotonApp("Consola", "CMD", TemaUI.colorApp(i++), e -> abrirConsola()));
-        panel.add(TemaUI.crearBotonApp("Reproductor", "MUS", TemaUI.colorApp(i++), e -> abrirReproductor()));
-        panel.add(TemaUI.crearBotonApp("INSTA+", "IG", TemaUI.colorApp(i++), e -> abrirInstaPlus()));
+        panel.add(TemaUI.crearBotonAppConImagen("Explorador", "Archivos.jpg", e -> abrirExplorador()));
+        panel.add(TemaUI.crearBotonAppConImagen("Editor de texto", "word.png", e -> abrirEditorTexto()));
+        panel.add(TemaUI.crearBotonAppConImagen("Visor de imágenes", "galeria.png", e -> abrirVisorImagenes()));
+        panel.add(TemaUI.crearBotonAppConImagen("Consola", "cmd.png", e -> abrirConsola()));
+        panel.add(TemaUI.crearBotonAppConImagen("Reproductor", "Musica.png", e -> abrirReproductor()));
+        panel.add(TemaUI.crearBotonAppConImagen("INSTA+", "insta.png", e -> abrirInstaPlus()));
  
         if (usuarioActual.isAdministrador()) {
-            panel.add(TemaUI.crearBotonApp("Administrar usuarios", "ADM", TemaUI.colorApp(i++), e -> abrirAdministrarUsuarios()));
+            panel.add(TemaUI.crearBotonAppConImagen("Administrar usuarios", "admin.png", e -> abrirAdministrarUsuarios()));
         }
  
         return panel;
@@ -562,45 +561,72 @@ public class EscritorioPrincipal extends JFrame {
  
         JScrollPane scroll = new JScrollPane(arbol);
  
-        JPanel panelBotones = new JPanel();
+        JPanel panelAcciones = new JPanel(new GridLayout(2, 4, 6, 6));
+        panelAcciones.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
+
         JButton btnCortar = new JButton("Cortar");
-        btnCortar.addActionListener(e -> {
-            cortarArchivo(arbol, ventana);
-        });
- 
+        btnCortar.addActionListener(e -> cortarArchivo(arbol, ventana));
+
         JButton btnCrear = new JButton("Nueva carpeta");
         btnCrear.addActionListener(e -> crearCarpeta(arbol, ventana, raiz));
- 
+
         JButton btnRenombrar = new JButton("Renombrar");
         btnRenombrar.addActionListener(e -> renombrarArchivo(arbol, ventana, raiz));
- 
+
         JButton btnCopiar = new JButton("Copiar");
         btnCopiar.addActionListener(e -> copiarArchivo(arbol, ventana));
- 
+
         JButton btnPegar = new JButton("Pegar");
         btnPegar.addActionListener(e -> pegarArchivo(arbol, ventana, raiz));
 
         JButton btnBorrar = new JButton("Borrar");
+        btnBorrar.setToolTipText("Borrar archivo o carpeta seleccionada");
         btnBorrar.addActionListener(e -> borrarArchivo(arbol, ventana, raiz));
 
-        JButton btnOrganizar = new JButton("Organizar carpeta seleccionada");
+        JButton btnOrganizar = new JButton("Organizar carpeta");
+        btnOrganizar.setToolTipText("Organizar los archivos de la carpeta seleccionada");
         btnOrganizar.addActionListener(e -> organizarCarpetaSeleccionada(arbol, ventana, raiz, btnOrganizar));
- 
-        cmbOrden.addActionListener(e -> actualizarArbol(arbol, raiz, (String) cmbOrden.getSelectedItem()));
- 
-        panelBotones.add(btnCortar);
-        panelBotones.add(btnCrear);
-        panelBotones.add(btnRenombrar);
-        panelBotones.add(btnCopiar);
-        panelBotones.add(btnPegar);
-        panelBotones.add(btnBorrar);
-        panelBotones.add(btnOrganizar);
-        panelBotones.add(new JLabel("Ordenar: "));
-        panelBotones.add(cmbOrden);
- 
+
+        JPanel panelOrden = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        panelOrden.setOpaque(false);
+        panelOrden.add(new JLabel("Ordenar:"));
+        panelOrden.add(cmbOrden);
+
+        panelAcciones.add(btnCortar);
+        panelAcciones.add(btnCrear);
+        panelAcciones.add(btnRenombrar);
+        panelAcciones.add(btnCopiar);
+        panelAcciones.add(btnPegar);
+        panelAcciones.add(btnBorrar);
+        panelAcciones.add(btnOrganizar);
+        panelAcciones.add(panelOrden);
+        panelAcciones.setPreferredSize(new Dimension(0, 86));
+
+        // También se puede acceder a las operaciones directamente desde el elemento seleccionado.
+        JPopupMenu menuContextual = new JPopupMenu();
+        JMenuItem ctxAbrir = new JMenuItem("Abrir carpeta");
+        JMenuItem ctxBorrar = new JMenuItem("Borrar");
+        JMenuItem ctxOrganizar = new JMenuItem("Organizar carpeta");
+        ctxAbrir.addActionListener(e -> {
+            File seleccionado = obtenerArchivoSeleccionado(arbol);
+            if (seleccionado != null && seleccionado.isDirectory()) {
+                TreePath ruta = arbol.getSelectionPath();
+                if (ruta != null) {
+                    arbol.expandPath(ruta);
+                }
+            }
+        });
+        ctxBorrar.addActionListener(e -> borrarArchivo(arbol, ventana, raiz));
+        ctxOrganizar.addActionListener(e -> organizarCarpetaSeleccionada(arbol, ventana, raiz, btnOrganizar));
+        menuContextual.add(ctxAbrir);
+        menuContextual.addSeparator();
+        menuContextual.add(ctxBorrar);
+        menuContextual.add(ctxOrganizar);
+        arbol.setComponentPopupMenu(menuContextual);
+
         ventana.setLayout(new BorderLayout());
         ventana.add(scroll, BorderLayout.CENTER);
-        ventana.add(panelBotones, BorderLayout.SOUTH);
+        ventana.add(panelAcciones, BorderLayout.SOUTH);
  
         mostrarVentanaInterna("explorador", ventana);
     }
@@ -1506,7 +1532,7 @@ public class EscritorioPrincipal extends JFrame {
         ventana.setLayout(new BorderLayout());
  
         
-        PantallaInstaPlus panelInstaPlus = new PantallaInstaPlus();
+        PantallaInstaPlus panelInstaPlus = new PantallaInstaPlus(usuarioActual.getUsername());
         ventana.add(panelInstaPlus, BorderLayout.CENTER);
  
         mostrarVentanaInterna("instaplus", ventana);

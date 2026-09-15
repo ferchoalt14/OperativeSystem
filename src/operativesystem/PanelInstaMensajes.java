@@ -11,6 +11,7 @@ public class PanelInstaMensajes extends JPanel {
     private final InstaControlador controlador;
     private final JPanel panelLista;
     private final JTextField txtNuevoDM;
+    private final JLabel lblNotificaciones;
 
     public PanelInstaMensajes(InstaControlador controlador) {
         super(new BorderLayout(0, 12));
@@ -21,6 +22,10 @@ public class PanelInstaMensajes extends JPanel {
         JLabel lblTitulo = new JLabel("Mensajes");
         lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 20));
         lblTitulo.setForeground(TemaUI.ACCENT_OSCURO);
+
+        lblNotificaciones = new JLabel("Notificaciones sin leer: 0");
+        lblNotificaciones.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        lblNotificaciones.setForeground(TemaUI.TEXTO_SUAVE);
 
         txtNuevoDM = TemaUI.crearCampoTexto("Escribir a un username nuevo...", 16);
         JButton btnIniciar = TemaUI.crearBotonPrimario("Iniciar chat");
@@ -35,7 +40,8 @@ public class PanelInstaMensajes extends JPanel {
         panelEncabezado.setOpaque(false);
         panelEncabezado.setLayout(new BoxLayout(panelEncabezado, BoxLayout.Y_AXIS));
         panelEncabezado.add(lblTitulo);
-        panelEncabezado.add(Box.createVerticalStrut(10));
+        panelEncabezado.add(lblNotificaciones);
+        panelEncabezado.add(Box.createVerticalStrut(8));
         panelEncabezado.add(panelNuevo);
 
         panelLista = new PanelDesplazable(new BorderLayout());
@@ -50,6 +56,12 @@ public class PanelInstaMensajes extends JPanel {
 
         add(panelEncabezado, BorderLayout.NORTH);
         add(scroll, BorderLayout.CENTER);
+    }
+
+    /** Actualiza el indicador de notificaciones leído por el hilo de Inbox. */
+    public void actualizarNotificaciones(int noLeidas) {
+        lblNotificaciones.setText("Notificaciones sin leer: " + Math.max(0, noLeidas));
+        lblNotificaciones.setForeground(noLeidas > 0 ? TemaUI.ACCENT_OSCURO : TemaUI.TEXTO_SUAVE);
     }
 
     private void iniciarChatNuevo() {

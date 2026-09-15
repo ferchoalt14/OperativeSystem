@@ -30,6 +30,8 @@ public class ClienteInsta {
 
     private static final int ESPERA_RESPUESTA_MS = 6000;
     private static final int INTERVALO_RECONEXION_MS = 3000;
+    /** Host del servidor; en LAN se define con -Dinsta.server.host=IP_DEL_SERVIDOR. */
+    private static final String HOST_SERVIDOR = System.getProperty("insta.server.host", "127.0.0.1");
 
     private final String usuario;
     private final Oyente oyente;
@@ -135,7 +137,7 @@ public class ClienteInsta {
 
         Socket nuevo = new Socket();
         try {
-            nuevo.connect(new InetSocketAddress(InetAddress.getLoopbackAddress(), ServidorInsta.PUERTO), 2000);
+            nuevo.connect(new InetSocketAddress(InetAddress.getByName(HOST_SERVIDOR), ServidorInsta.PUERTO), 2000);
             nuevo.setTcpNoDelay(true);
             nuevo.setSoTimeout(3000); // solo para el saludo inicial
             ObjectOutputStream out = new ObjectOutputStream(new BufferedOutputStream(nuevo.getOutputStream()));

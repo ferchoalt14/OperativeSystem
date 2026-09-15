@@ -7,7 +7,7 @@ import java.util.List;
 public class GestorNotificaciones {
 
     private static File archivoDe(String username) {
-        return new File(GestorInstaPlus.rutaCarpetaInsta(username), "notificaciones.ins");
+        return new File(GestorInstaPlus.rutaCarpetaInsta(username), "notificaciones" + ArchivosInsta.EXTENSION);
     }
 
     @SuppressWarnings("unchecked")
@@ -17,8 +17,8 @@ public class GestorNotificaciones {
         if (!archivo.exists()) {
             return lista;
         }
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(archivo))) {
-            Object obj = ois.readObject();
+        try {
+            Object obj = ArchivosInsta.leerObjeto(archivo);
             if (obj instanceof List) {
                 for (Object o : (List<?>) obj) {
                     if (o instanceof Notificacion) {

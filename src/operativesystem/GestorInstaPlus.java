@@ -44,7 +44,7 @@ public class GestorInstaPlus {
 
     private static File archivoSesion(String usuarioSO) {
         String limpio = usuarioSO.toLowerCase().replaceAll("[^a-z0-9._-]", "_");
-        return new File(RUTA_SESIONES, limpio + ".ses");
+        return new File(RUTA_SESIONES, limpio + ArchivosInsta.EXTENSION);
     }
 
     /** Guarda qué cuenta de INSTA+ tiene abierta el usuario del SO indicado. */
@@ -54,8 +54,8 @@ public class GestorInstaPlus {
         }
         File archivo = archivoSesion(usuarioSO);
         archivo.getParentFile().mkdirs();
-        try (DataOutputStream dos = new DataOutputStream(new FileOutputStream(archivo))) {
-            dos.writeUTF(usuario.getUsername());
+        try {
+            ArchivosInsta.guardarCadena(archivo, usuario.getUsername());
         } catch (IOException e) {
             System.out.println("No se pudo guardar la sesión de INSTA+: " + e.getMessage());
         }
@@ -68,10 +68,21 @@ public class GestorInstaPlus {
         }
         File archivo = archivoSesion(usuarioSO);
         if (!archivo.exists()) {
-            return null;
+            // Migración de compatibilidad con la versión anterior.
+            String limpio = usuarioSO.toLowerCase().replaceAll("[^a-z0-9._-]", "_");
+            File anterior = new File(RUTA_SESIONES, limpio + ".ses");
+            if (anterior.exists()) {
+                try {
+                    java.nio.file.Files.move(anterior.toPath(), archivo.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException ignored) {
+                    return null;
+                }
+            } else {
+                return null;
+            }
         }
-        try (DataInputStream dis = new DataInputStream(new FileInputStream(archivo))) {
-            String username = dis.readUTF();
+        try {
+            String username = ArchivosInsta.leerCadena(archivo);
             UsuarioInsta u = buscarPorUsername(username);
             if (u == null) {
                 archivo.delete();
@@ -127,7 +138,56 @@ public class GestorInstaPlus {
    
     public static void inicializarSistema() {
         asegurarRaiz();
+        migrarArchivosInstaAntiguos();
+        migrarSesionesAntiguas();
         asegurarCuentasPorDefecto();
+    }
+
+    /** Migra una sola vez archivos .ins de la estructura anterior a la extensión propia .sop. */
+    private static void migrarArchivosInstaAntiguos() {
+        File raiz = new File(RUTA_INSTA_RAIZ);
+        File usuariosViejos = new File(raiz, "usuarios.ins");
+        File usuariosNuevos = new File(RUTA_INSTA_USERS);
+        if (!usuariosNuevos.exists() && usuariosViejos.exists()) {
+            try {
+                java.nio.file.Files.move(usuariosViejos.toPath(), usuariosNuevos.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                System.out.println("No se pudo migrar usuarios.ins: " + e.getMessage());
+            }
+        }
+        File[] carpetas = raiz.listFiles(File::isDirectory);
+        if (carpetas != null) {
+            for (File carpeta : carpetas) {
+                if ("sesiones".equals(carpeta.getName())) {
+                    continue;
+                }
+                for (String base : new String[]{"following", "followers", "insta", "inbox", "stickers", "notificaciones"}) {
+                    migrarArchivoAntiguo(carpeta, base);
+                }
+            }
+        }
+    }
+
+    private static void migrarSesionesAntiguas() {
+        File carpeta = new File(RUTA_SESIONES);
+        if (!carpeta.exists()) {
+            return;
+        }
+        File[] antiguas = carpeta.listFiles((dir, nombre) -> nombre.endsWith(".ses"));
+        if (antiguas == null) {
+            return;
+        }
+        for (File antiguo : antiguas) {
+            String base = antiguo.getName().substring(0, antiguo.getName().length() - 4);
+            File nuevo = new File(carpeta, base + ArchivosInsta.EXTENSION);
+            if (!nuevo.exists()) {
+                try {
+                    java.nio.file.Files.move(antiguo.toPath(), nuevo.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+                } catch (IOException e) {
+                    System.out.println("No se pudo migrar sesión " + antiguo.getName() + ": " + e.getMessage());
+                }
+            }
+        }
     }
 
     private static void asegurarCuentasPorDefecto() {
@@ -198,8 +258,11 @@ public class GestorInstaPlus {
         if (!file.exists()) {
             return usuarios;
         }
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
-            usuarios = (List<UsuarioInsta>) ois.readObject();
+        try {
+            Object obj = ArchivosInsta.leerObjeto(file);
+            if (obj instanceof List) {
+                usuarios = (List<UsuarioInsta>) obj;
+            }
         } catch (EOFException e) {
             
         } catch (Exception e) {
@@ -275,20 +338,29 @@ public class GestorInstaPlus {
         new File(carpeta, "folders_personales").mkdirs();
         new File(carpeta, "stickers_personales").mkdirs();
 
-        crearArchivoBinarioVacio(new File(carpeta, "following.ins"));
-        crearArchivoBinarioVacio(new File(carpeta, "followers.ins"));
-        crearArchivoBinarioVacio(new File(carpeta, "insta.ins"));
-        crearArchivoBinarioVacio(new File(carpeta, "inbox.ins"));
-        crearArchivoBinarioVacio(new File(carpeta, "stickers.ins"));
+        for (String base : new String[]{"following", "followers", "insta", "inbox", "stickers", "notificaciones"}) {
+            migrarArchivoAntiguo(carpeta, base);
+            crearArchivoBinarioVacio(new File(carpeta, base + ArchivosInsta.EXTENSION));
+        }
+    }
+
+    private static void migrarArchivoAntiguo(File carpeta, String base) {
+        File antiguo = new File(carpeta, base + ".ins");
+        File nuevo = new File(carpeta, base + ArchivosInsta.EXTENSION);
+        if (!nuevo.exists() && antiguo.exists()) {
+            try {
+                java.nio.file.Files.move(antiguo.toPath(), nuevo.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            } catch (IOException e) {
+                System.out.println("No se pudo migrar " + antiguo.getName() + ": " + e.getMessage());
+            }
+        }
     }
 
     private static void crearArchivoBinarioVacio(File archivo) throws IOException {
         if (archivo.exists()) {
             return;
         }
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(archivo))) {
-            oos.writeObject(new ArrayList<Object>());
-        }
+        ArchivosInsta.guardarObjeto(archivo, new ArrayList<Object>());
     }
 
    
@@ -299,8 +371,8 @@ public class GestorInstaPlus {
         if (!archivo.exists()) {
             return lista;
         }
-        try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(archivo))) {
-            Object obj = ois.readObject();
+        try {
+            Object obj = ArchivosInsta.leerObjeto(archivo);
             if (obj instanceof List) {
                 for (Object o : (List<?>) obj) {
                     if (o instanceof String) {
@@ -323,7 +395,7 @@ public class GestorInstaPlus {
     
     public static ListaEnlazada<String> obtenerFollowing(String username) throws ArchivoCorruptoException {
         ListaEnlazada<String> lista = new ListaEnlazada<>();
-        for (String u : cargarListaStrings(new File(rutaCarpetaInsta(username), "following.ins"))) {
+        for (String u : cargarListaStrings(new File(rutaCarpetaInsta(username), "following" + ArchivosInsta.EXTENSION))) {
             lista.agregar(u);
         }
         return lista;
@@ -332,7 +404,7 @@ public class GestorInstaPlus {
     
     public static ListaEnlazada<String> obtenerFollowers(String username) throws ArchivoCorruptoException {
         ListaEnlazada<String> lista = new ListaEnlazada<>();
-        for (String u : cargarListaStrings(new File(rutaCarpetaInsta(username), "followers.ins"))) {
+        for (String u : cargarListaStrings(new File(rutaCarpetaInsta(username), "followers" + ArchivosInsta.EXTENSION))) {
             lista.agregar(u);
         }
         return lista;
@@ -358,14 +430,14 @@ public class GestorInstaPlus {
             return;
         }
 
-        File archivoFollowing = new File(rutaCarpetaInsta(usernameSeguidor), "following.ins");
+        File archivoFollowing = new File(rutaCarpetaInsta(usernameSeguidor), "following" + ArchivosInsta.EXTENSION);
         List<String> following = cargarListaStrings(archivoFollowing);
         if (!following.contains(usernameSeguido)) {
             following.add(usernameSeguido);
             guardarListaStrings(archivoFollowing, following);
         }
 
-        File archivoFollowers = new File(rutaCarpetaInsta(usernameSeguido), "followers.ins");
+        File archivoFollowers = new File(rutaCarpetaInsta(usernameSeguido), "followers" + ArchivosInsta.EXTENSION);
         List<String> followers = cargarListaStrings(archivoFollowers);
         if (!followers.contains(usernameSeguidor)) {
             followers.add(usernameSeguidor);
@@ -384,13 +456,13 @@ public class GestorInstaPlus {
 
     public static void dejarDeSeguir(String usernameSeguidor, String usernameSeguido)
             throws ArchivoCorruptoException, IOException {
-        File archivoFollowing = new File(rutaCarpetaInsta(usernameSeguidor), "following.ins");
+        File archivoFollowing = new File(rutaCarpetaInsta(usernameSeguidor), "following" + ArchivosInsta.EXTENSION);
         List<String> following = cargarListaStrings(archivoFollowing);
         if (following.remove(usernameSeguido)) {
             guardarListaStrings(archivoFollowing, following);
         }
 
-        File archivoFollowers = new File(rutaCarpetaInsta(usernameSeguido), "followers.ins");
+        File archivoFollowers = new File(rutaCarpetaInsta(usernameSeguido), "followers" + ArchivosInsta.EXTENSION);
         List<String> followers = cargarListaStrings(archivoFollowers);
         if (followers.remove(usernameSeguidor)) {
             guardarListaStrings(archivoFollowers, followers);
@@ -423,7 +495,7 @@ public class GestorInstaPlus {
         // following / followers de todas las cuentas
         for (UsuarioInsta u : usuarios) {
             String dueno = u.getUsername().equalsIgnoreCase(viejo) ? nuevo : u.getUsername();
-            for (String nombreArchivo : new String[]{"following.ins", "followers.ins"}) {
+            for (String nombreArchivo : new String[]{"following" + ArchivosInsta.EXTENSION, "followers" + ArchivosInsta.EXTENSION}) {
                 File archivo = new File(rutaCarpetaInsta(dueno), nombreArchivo);
                 List<String> lista = cargarListaStrings(archivo);
                 boolean cambio = false;
