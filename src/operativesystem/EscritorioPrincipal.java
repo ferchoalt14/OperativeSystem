@@ -579,6 +579,9 @@ public class EscritorioPrincipal extends JFrame {
  
         JButton btnPegar = new JButton("Pegar");
         btnPegar.addActionListener(e -> pegarArchivo(arbol, ventana, raiz));
+
+        JButton btnBorrar = new JButton("Borrar");
+        btnBorrar.addActionListener(e -> borrarArchivo(arbol, ventana, raiz));
  
         cmbOrden.addActionListener(e -> actualizarArbol(arbol, raiz, (String) cmbOrden.getSelectedItem()));
  
@@ -587,6 +590,7 @@ public class EscritorioPrincipal extends JFrame {
         panelBotones.add(btnRenombrar);
         panelBotones.add(btnCopiar);
         panelBotones.add(btnPegar);
+        panelBotones.add(btnBorrar);
         panelBotones.add(new JLabel("Ordenar: "));
         panelBotones.add(cmbOrden);
  
@@ -815,6 +819,60 @@ public class EscritorioPrincipal extends JFrame {
         return candidato;
     }
  
+    /**
+     * Borra un archivo o carpeta (recursivamente si es carpeta)
+     */
+    private void borrarArchivo(JTree arbol, JInternalFrame ventana, File raiz) {
+        File seleccion = obtenerArchivoSeleccionado(arbol);
+        if (seleccion == null || seleccion.equals(raiz)) {
+            JOptionPane.showMessageDialog(ventana, "Selecciona un archivo o carpeta para borrar.");
+            return;
+        }
+        if (!estaDentroDeRaiz(seleccion, raiz)) {
+            JOptionPane.showMessageDialog(ventana, "No puedes borrar algo fuera de tu carpeta de usuario.",
+                    "Explorador", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        String mensaje = seleccion.isDirectory()
+                ? "¿Borrar la carpeta \"" + seleccion.getName() + "\" y TODO su contenido?\nEsta acción no se puede deshacer."
+                : "¿Borrar el archivo \"" + seleccion.getName() + "\"?\nEsta acción no se puede deshacer.";
+        int confirmacion = JOptionPane.showConfirmDialog(ventana, mensaje, "Confirmar borrado",
+                JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirmacion != JOptionPane.YES_OPTION) {
+            return;
+        }
+
+        if (!borrarRecursivamente(seleccion)) {
+            JOptionPane.showMessageDialog(ventana, "No se pudo borrar \"" + seleccion.getName() + "\" por completo.",
+                    "Explorador", JOptionPane.ERROR_MESSAGE);
+        }
+
+        // Si lo que acabamos de borrar era justo lo que tenías copiado/cortado,
+        // esa referencia ya no sirve — sin esto, "Pegar" fallaría después con un
+        // error confuso ("el archivo no existe") en vez de simplemente no ofrecer
+        // pegar nada.
+        if (seleccion.equals(archivoCopiado)) {
+            archivoCopiado = null;
+        }
+
+        actualizarArbol(arbol, raiz, "Nombre");
+    }
+
+    private boolean borrarRecursivamente(File archivo) {
+        if (archivo.isDirectory()) {
+            File[] hijos = archivo.listFiles();
+            if (hijos != null) {
+                for (File hijo : hijos) {
+                    if (!borrarRecursivamente(hijo)) {
+                        return false;
+                    }
+                }
+            }
+        }
+        return archivo.delete();
+    }
+
     private void copiarRecursivamente(File origen, File destino) throws IOException {
         if (origen.isDirectory()) {
             if (!destino.mkdirs() && !destino.isDirectory()) {

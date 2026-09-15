@@ -3,6 +3,7 @@ package operativesystem;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -234,7 +235,11 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
 
     @Override
     public void abrirChatConUsuario(String username) {
-        panelChat.abrirCon(username, "MENSAJES");
+        try {
+            panelChat.abrirCon(username, "MENSAJES");
+        } catch (IOException ex) {
+            System.getLogger(PantallaInstaPlus.class.getName()).log(System.Logger.Level.ERROR, (String) null, ex);
+        }
         noLeidosPorConversacion.put(username, 0);
     }
 
