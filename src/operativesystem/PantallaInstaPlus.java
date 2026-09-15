@@ -3,7 +3,8 @@ package operativesystem;
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
-
+import java.util.HashMap;
+import java.util.Map;
 
 public class PantallaInstaPlus extends JPanel implements InstaControlador {
 
@@ -23,6 +24,12 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
     private PanelInstaCrearPost panelCrearPost;
     private PanelInstaPerfil panelPerfil;
     private PanelInstaPerfilAjeno panelPerfilAjeno;
+    private PanelInstaMensajes panelMensajes;
+    private PanelInstaChat panelChat;
+    private JButton btnMensajesNav;
+
+    private final Map<String, Integer> noLeidosPorConversacion = new HashMap<>();
+    private Timer timerNotificaciones;
 
     public PantallaInstaPlus() {
         super(new BorderLayout());
@@ -39,8 +46,21 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         panelRaiz.add(construirPanelApp(), "APP");
 
         add(panelRaiz, BorderLayout.CENTER);
-        cardLayoutRaiz.show(panelRaiz, "LOGIN");
+
+        UsuarioInsta sesion = GestorInstaPlus.obtenerSesion();
+        if (sesion != null) {
+            this.usuarioActual = sesion;
+            refrescarPerfilPropio();
+            refrescarFeed();
+            refrescarMensajes();
+            cardLayoutRaiz.show(panelRaiz, "APP");
+            mostrarSeccion("FEED");
+            iniciarNotificaciones();
+        } else {
+            cardLayoutRaiz.show(panelRaiz, "LOGIN");
+        }
     }
+    private PanelInstaEditarPerfil panelEditarPerfil;
 
     private JPanel construirPanelApp() {
         JPanel panel = new JPanel(new BorderLayout());
@@ -51,19 +71,23 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         panelBuscar = new PanelInstaBuscar(this);
         panelCrearPost = new PanelInstaCrearPost(this);
         panelPerfil = new PanelInstaPerfil(this);
+        panelEditarPerfil = new PanelInstaEditarPerfil(this);
         panelPerfilAjeno = new PanelInstaPerfilAjeno(this);
+        panelMensajes = new PanelInstaMensajes(this);
+        panelChat = new PanelInstaChat(this);
 
         panelSecciones.setOpaque(false);
         panelSecciones.add(panelFeed, "FEED");
         panelSecciones.add(panelBuscar, "BUSCAR");
         panelSecciones.add(panelCrearPost, "CREAR");
-        panelSecciones.add(construirPanelMensajePlaceholder("✉",
-                "Tu bandeja de entrada está vacía.<br>El Inbox llegará próximamente."), "MENSAJES");
+        panelSecciones.add(panelMensajes, "MENSAJES");
+        panelSecciones.add(panelChat, "CHAT");
         panelSecciones.add(panelPerfil, "PERFIL");
         panelSecciones.add(panelPerfilAjeno, "PERFIL_AJENO");
-
+        panelSecciones.add(panelEditarPerfil, "EDITAR_PERFIL");
         panel.add(panelSecciones, BorderLayout.CENTER);
         return panel;
+
     }
 
     private JPanel construirBarraLateral() {
@@ -80,17 +104,31 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         lblLogo.setBorder(new EmptyBorder(22, 18, 26, 18));
         lblLogo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton btnInicio = crearBotonNav("🏠", "Inicio", e -> { refrescarFeed(); mostrarSeccion("FEED"); });
+        JButton btnInicio = crearBotonNav("🏠", "Inicio", e -> {
+            refrescarFeed();
+            mostrarSeccion("FEED");
+        });
         JButton btnBuscar = crearBotonNav("🔍", "Buscar", e -> mostrarSeccion("BUSCAR"));
         JButton btnCrear = crearBotonNav("➕", "Crear", e -> mostrarSeccion("CREAR"));
-        JButton btnMensajes = crearBotonNav("✉", "Mensajes", e -> mostrarSeccion("MENSAJES"));
-        JButton btnPerfil = crearBotonNav("👤", "Perfil", e -> { refrescarPerfilPropio(); mostrarSeccion("PERFIL"); });
+        btnMensajesNav = crearBotonNav("✉", "Mensajes", e -> {
+            refrescarMensajes();
+            mostrarSeccion("MENSAJES");
+        });
+        JButton btnPerfil = crearBotonNav("👤", "Perfil", e -> {
+            refrescarPerfilPropio();
+            mostrarSeccion("PERFIL");
+        });
+        JButton btnEditarPerfil = crearBotonNav("✏", "Editar perfil", e -> {
+            panelEditarPerfil.cargarDatos();
+            mostrarSeccion("EDITAR_PERFIL");
+        });
+        barra.add(btnEditarPerfil);
 
         barra.add(lblLogo);
         barra.add(btnInicio);
         barra.add(btnBuscar);
         barra.add(btnCrear);
-        barra.add(btnMensajes);
+        barra.add(btnMensajesNav);
         barra.add(btnPerfil);
         barra.add(Box.createVerticalGlue());
 
@@ -140,8 +178,7 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         return panel;
     }
 
-  
-
+    // ------------------- Implementación de InstaControlador -------------------
     @Override
     public void mostrarPantallaRaiz(String nombre) {
         cardLayoutRaiz.show(panelRaiz, nombre);
@@ -155,10 +192,13 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
     @Override
     public void ingresarAlApp(UsuarioInsta usuario) {
         this.usuarioActual = usuario;
+        GestorInstaPlus.guardarSesion(usuario);
         refrescarPerfilPropio();
         refrescarFeed();
+        refrescarMensajes();
         cardLayoutRaiz.show(panelRaiz, "APP");
         mostrarSeccion("FEED");
+        iniciarNotificaciones();
     }
 
     @Override
@@ -193,8 +233,69 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
     }
 
     @Override
+    public void abrirChatConUsuario(String username) {
+        panelChat.abrirCon(username, "MENSAJES");
+        noLeidosPorConversacion.put(username, 0);
+    }
+
+    @Override
+    public void refrescarMensajes() {
+        if (usuarioActual == null) {
+            return;
+        }
+        panelMensajes.refrescar();
+        try {
+            int total = GestorMensajes.contarNoLeidosTotal(usuarioActual.getUsername());
+            btnMensajesNav.setText("✉   Mensajes" + (total > 0 ? " (" + total + ")" : ""));
+        } catch (ArchivoCorruptoException ex) {
+            
+        }
+    }
+
+    private void iniciarNotificaciones() {
+        if (timerNotificaciones != null) {
+            timerNotificaciones.stop();
+        }
+        noLeidosPorConversacion.clear();
+        timerNotificaciones = new Timer(6000, e -> revisarMensajesNuevos());
+        timerNotificaciones.start();
+    }
+
+    private void revisarMensajesNuevos() {
+        if (usuarioActual == null) {
+            return;
+        }
+        try {
+            ListaEnlazada<String> conversaciones = GestorMensajes.obtenerConversaciones(usuarioActual.getUsername());
+            boolean huboCambios = false;
+            for (String otro : conversaciones) {
+                int noLeidos = GestorMensajes.contarNoLeidosDe(usuarioActual.getUsername(), otro);
+                Integer anterior = noLeidosPorConversacion.getOrDefault(otro, 0);
+                if (noLeidos > anterior) {
+                    huboCambios = true;
+                    boolean estaViendoEseChat = panelChat.isShowing() && otro.equalsIgnoreCase(panelChat.getUsuarioActivo());
+                    if (!estaViendoEseChat) {
+                        ToastNotificacion.mostrar("Nuevo mensaje", "@" + otro + " te escribió",
+                                () -> abrirChatConUsuario(otro));
+                    }
+                }
+                noLeidosPorConversacion.put(otro, noLeidos);
+            }
+            if (huboCambios) {
+                refrescarMensajes();
+            }
+        } catch (ArchivoCorruptoException ex) {
+            
+        }
+    }
+
+    @Override
     public void cerrarSesion() {
+        if (timerNotificaciones != null) {
+            timerNotificaciones.stop();
+        }
         usuarioActual = null;
+        GestorInstaPlus.cerrarSesionGuardada();
         panelLogin.limpiarUsername();
         panelLogin.limpiarPassword();
         cardLayoutRaiz.show(panelRaiz, "LOGIN");

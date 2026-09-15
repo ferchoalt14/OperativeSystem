@@ -1,6 +1,10 @@
 package operativesystem;
  
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Iterator;
+import java.util.List;
 import java.util.NoSuchElementException;
  
 /**
@@ -124,6 +128,23 @@ public class ListaEnlazada<T> implements Iterable<T> {
         };
     }
     
+    /** Ordena la lista enlazada in-place según el comparador dado. */
+    public void ordenarPor(Comparator<T> comparador) {
+        if (tamano < 2) {
+            return;
+        }
+        List<T> temporal = new ArrayList<>();
+        for (T dato : this) {
+            temporal.add(dato);
+        }
+        Collections.sort(temporal, comparador);
+        Nodo<T> actual = cabeza;
+        for (T dato : temporal) {
+            actual.setDato(dato);
+            actual = actual.getSiguiente();
+        }
+    }
+
     @Override
     public String toString(){
     StringBuilder sb = new StringBuilder("[");

@@ -18,7 +18,7 @@ public class PanelInstaPerfil extends JPanel {
     private final JLabel lblPosts, lblFollowers, lblFollowing;
     private final JLabel lblDatos;
 
-    private final JPanel panelPublicaciones;
+    private final PanelPostGrid panelPublicaciones;
     private final JPanel panelSeguidoresLista;
     private final JPanel panelSiguiendoLista;
 
@@ -80,9 +80,7 @@ public class PanelInstaPerfil extends JPanel {
         panelEncabezado.add(Box.createVerticalStrut(16));
 
         // --- Pestañas: Publicaciones / Seguidores / Siguiendo ---
-        panelPublicaciones = new PanelDesplazable(new BorderLayout());
-        panelPublicaciones.setOpaque(false);
-        panelPublicaciones.setLayout(new BoxLayout(panelPublicaciones, BoxLayout.Y_AXIS));
+        panelPublicaciones = new PanelPostGrid(controlador, this::refrescar);
 
         panelSeguidoresLista = new PanelDesplazable(new BorderLayout());
         panelSeguidoresLista.setOpaque(false);
@@ -150,23 +148,23 @@ public class PanelInstaPerfil extends JPanel {
             lblAvatar.setIcon(TemaUI.crearIconoCircular(iniciales, TemaUI.colorApp(1), 96));
         }
 
-        List<String> following;
-        List<String> followers;
+        ListaEnlazada<String> following;
+        ListaEnlazada<String> followers;
         int followersParaMostrar;
         try {
             following = GestorInstaPlus.obtenerFollowing(actual.getUsername());
             followers = GestorInstaPlus.obtenerFollowers(actual.getUsername());
             followersParaMostrar = GestorInstaPlus.contarFollowersParaMostrar(actual.getUsername());
         } catch (ArchivoCorruptoException ex) {
-            following = new ArrayList<>();
-            followers = new ArrayList<>();
+            following = new ListaEnlazada<>();
+            followers = new ListaEnlazada<>();
             followersParaMostrar = 0;
         }
         int publicaciones = GestorPosts.contarPosts(actual.getUsername());
 
         lblPosts.setText(String.valueOf(publicaciones));
         lblFollowers.setText(String.valueOf(followersParaMostrar));
-        lblFollowing.setText(String.valueOf(following.size()));
+        lblFollowing.setText(String.valueOf(following.tamano()));
 
         lblDatos.setText("<html>" + actual.getEdad() + " años &nbsp;•&nbsp; "
                 + (actual.getGenero() == 'F' ? "Femenino" : "Masculino")
@@ -177,9 +175,9 @@ public class PanelInstaPerfil extends JPanel {
         refrescarPublicaciones(actual.getUsername());
     }
 
-    private void refrescarListaCuentas(JPanel contenedor, List<String> usuarios, String mensajeVacio) {
+    private void refrescarListaCuentas(JPanel contenedor, ListaEnlazada<String> usuarios, String mensajeVacio) {
         contenedor.removeAll();
-        if (usuarios.isEmpty()) {
+        if (usuarios.estaVacia()) {
             JLabel lblVacio = new JLabel(mensajeVacio);
             lblVacio.setForeground(TemaUI.TEXTO_SUAVE);
             contenedor.add(lblVacio);
@@ -194,30 +192,14 @@ public class PanelInstaPerfil extends JPanel {
     }
 
     private void refrescarPublicaciones(String username) {
-        panelPublicaciones.removeAll();
         List<Post> posts;
         try {
             posts = GestorPosts.cargarPostsDeUsuario(username);
         } catch (ArchivoCorruptoException ex) {
             posts = new ArrayList<>();
         }
-
-        if (posts.isEmpty()) {
-            JLabel lblVacio = new JLabel("<html><center>📷<br><br>Aún no tienes publicaciones.<br>"
-                    + "Crea tu primer post desde el menú \"Crear\".</center></html>", SwingConstants.CENTER);
-            lblVacio.setForeground(TemaUI.TEXTO_SUAVE);
-            lblVacio.setAlignmentX(Component.CENTER_ALIGNMENT);
-            lblVacio.setBorder(new EmptyBorder(30, 0, 0, 0));
-            panelPublicaciones.add(lblVacio);
-        } else {
-            for (Post post : posts) {
-                panelPublicaciones.add(crearTarjetaPost(post));
-                panelPublicaciones.add(Box.createVerticalStrut(14));
-            }
-        }
-
-        panelPublicaciones.revalidate();
-        panelPublicaciones.repaint();
+        panelPublicaciones.mostrarPosts(posts, "Aún no tienes publicaciones.<br>"
+                + "Crea tu primer post desde el menú \"Crear\".");
     }
 
     private JPanel crearFilaCuenta(String username) {
@@ -225,8 +207,7 @@ public class PanelInstaPerfil extends JPanel {
         fila.setOpaque(false);
         fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 44));
 
-        JLabel lblAvatarFila = new JLabel(TemaUI.crearIconoCircular(
-                username.substring(0, 1).toUpperCase(), TemaUI.colorApp(username.hashCode()), 32));
+        JLabel lblAvatarFila = new JLabel(AvatarHelper.avatarPara(username, 32));
         fila.add(lblAvatarFila, BorderLayout.WEST);
 
         JButton btnUsername = new JButton("@" + username);
@@ -242,58 +223,6 @@ public class PanelInstaPerfil extends JPanel {
         return fila;
     }
 
-    private JPanel crearTarjetaPost(Post post) {
-        JPanel tarjeta = new JPanel(new BorderLayout(0, 8));
-        tarjeta.setBackground(TemaUI.SUPERFICIE);
-        tarjeta.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(TemaUI.BORDE, 1, true),
-                new EmptyBorder(12, 14, 12, 14)));
-        tarjeta.setMaximumSize(new Dimension(Integer.MAX_VALUE, 420));
-        tarjeta.setAlignmentX(Component.LEFT_ALIGNMENT);
-
-        JLabel lblFecha = new JLabel(post.getFechaTexto());
-        lblFecha.setForeground(TemaUI.TEXTO_SUAVE);
-        lblFecha.setFont(new Font("SansSerif", Font.PLAIN, 10));
-
-        JLabel lblImagen;
-        String ruta = post.getRutaImagen();
-        if (ruta != null && !ruta.isBlank() && new File(ruta).exists()) {
-            ImageIcon icono = new ImageIcon(new ImageIcon(ruta).getImage()
-                    .getScaledInstance(360, 280, Image.SCALE_SMOOTH));
-            lblImagen = new JLabel(icono);
-        } else {
-            lblImagen = new JLabel("🖼", SwingConstants.CENTER);
-            lblImagen.setFont(lblImagen.getFont().deriveFont(48f));
-            lblImagen.setPreferredSize(new Dimension(360, 200));
-            lblImagen.setOpaque(true);
-            lblImagen.setBackground(TemaUI.FONDO);
-        }
-        lblImagen.setHorizontalAlignment(SwingConstants.CENTER);
-
-        JTextArea txtCaption = new JTextArea(post.getTexto());
-        txtCaption.setLineWrap(true);
-        txtCaption.setWrapStyleWord(true);
-        txtCaption.setEditable(false);
-        txtCaption.setOpaque(false);
-        txtCaption.setFont(new Font("SansSerif", Font.PLAIN, 13));
-        txtCaption.setForeground(TemaUI.TEXTO);
-
-        JLabel lblLikes = new JLabel("❤ " + post.getLikes() + " likes");
-        lblLikes.setForeground(TemaUI.TEXTO_SUAVE);
-        lblLikes.setFont(new Font("SansSerif", Font.PLAIN, 11));
-
-        JPanel panelInferior = new JPanel(new BorderLayout());
-        panelInferior.setOpaque(false);
-        panelInferior.add(txtCaption, BorderLayout.CENTER);
-        panelInferior.add(lblLikes, BorderLayout.SOUTH);
-
-        tarjeta.add(lblFecha, BorderLayout.NORTH);
-        tarjeta.add(lblImagen, BorderLayout.CENTER);
-        tarjeta.add(panelInferior, BorderLayout.SOUTH);
-
-        return tarjeta;
-    }
-
     private void elegirFotoPerfil() {
         UsuarioInsta actual = controlador.getUsuarioActual();
         if (actual == null) {
@@ -307,7 +236,7 @@ public class PanelInstaPerfil extends JPanel {
             File archivo = chooser.getSelectedFile();
             actual.setRutaFotoPerfil(archivo.getAbsolutePath());
             try {
-                GestorInstaPlus.actualizarUsuario(actual);
+                GestorInstaPlus.actualizarUsuario(actual, actual.getUsername());
                 refrescar();
             } catch (ArchivoCorruptoException | IOException ex) {
                 JOptionPane.showMessageDialog(this,

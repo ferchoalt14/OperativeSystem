@@ -8,7 +8,7 @@ import java.util.Date;
 public class UsuarioInsta implements Serializable {
 
     private static final long serialVersionUID = 1L;
-
+      private String descripcion;
     private String nombreCompleto;
     private char genero;
     private String username;
@@ -31,6 +31,7 @@ public class UsuarioInsta implements Serializable {
         this.rutaFotoPerfil = "";
         this.cuentaOficial = false;
         this.seguidoresBonus = 0;
+                this.descripcion = "";
     }
 
     public String getNombreCompleto() { return nombreCompleto; }
@@ -69,4 +70,9 @@ public class UsuarioInsta implements Serializable {
     
     public int getSeguidoresBonus() { return seguidoresBonus; }
     public void setSeguidoresBonus(int seguidoresBonus) { this.seguidoresBonus = seguidoresBonus; }
+    
+        public String getDescripcion() { return descripcion; }
+    public void setDescripcion(String descripcion) {
+        this.descripcion = descripcion != null ? descripcion : "";
+    }
 }

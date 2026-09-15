@@ -8,9 +8,12 @@ import java.util.List;
 public class GestorInstaPlus {
 
     private static final String RUTA_INSTA_RAIZ = System.getProperty("user.home") + "/MiniWindowsData/INSTA_RAIZ/";
-    private static final String RUTA_INSTA_USERS = RUTA_INSTA_RAIZ + "users_insta.ins";
+    private static final String RUTA_INSTA_USERS = RUTA_INSTA_RAIZ + "usuarios.sop";
 
+    
     private static final String INSTA_PASSWORD_DEFECTO = "Insta#2024";
+
+    private static final java.util.Random RANDOM_LIKES = new java.util.Random();
 
     private static final String[][] CUENTAS_POR_DEFECTO = {
             {"FC Barcelona", "fcbarcelona", "M", "1450000"},
@@ -23,6 +26,21 @@ public class GestorInstaPlus {
             {"Taylor Swift", "taylorswift", "F", "2800000"},
             {"Bad Bunny", "badbunny", "M", "2450000"}
     };
+
+   
+    private static UsuarioInsta sesionActiva;
+
+    public static void guardarSesion(UsuarioInsta usuario) {
+        sesionActiva = usuario;
+    }
+
+    public static UsuarioInsta obtenerSesion() {
+        return sesionActiva;
+    }
+
+    public static void cerrarSesionGuardada() {
+        sesionActiva = null;
+    }
 
     private static void asegurarRaiz() {
         File raiz = new File(RUTA_INSTA_RAIZ);
@@ -73,12 +91,13 @@ public class GestorInstaPlus {
                 }
 
                 crearArchivosPersonales(datos[1]);
+                sembrarPostOficialSiHaceFalta(datos[1]);
             }
             if (modificado) {
                 guardarUsuarios(usuarios);
             }
 
-         
+            // Las cuentas oficiales se siguen todas entre sí (eso sí queda automático).
             for (String[] datosA : CUENTAS_POR_DEFECTO) {
                 for (String[] datosB : CUENTAS_POR_DEFECTO) {
                     if (!datosA[1].equalsIgnoreCase(datosB[1])) {
@@ -88,6 +107,20 @@ public class GestorInstaPlus {
             }
         } catch (ArchivoCorruptoException | IOException e) {
             System.out.println("No se pudieron preparar las cuentas por defecto de INSTA+: " + e.getMessage());
+        }
+    }
+
+   
+    private static void sembrarPostOficialSiHaceFalta(String username) {
+        try {
+            if (GestorPosts.contarPosts(username) == 0) {
+                String texto = "¡Hola a todos! Bienvenidos a mi cuenta oficial en INSTA+ 💜 Gracias por seguirme.";
+                Post post = GestorPosts.crearPost(username, texto, "");
+                int likesBase = 8000 + RANDOM_LIKES.nextInt(92000); // entre 8,000 y 100,000
+                GestorPosts.establecerLikesBase(username, post.getId(), likesBase);
+            }
+        } catch (ArchivoCorruptoException | IOException e) {
+            System.out.println("No se pudo sembrar el post oficial de " + username + ": " + e.getMessage());
         }
     }
 
@@ -102,7 +135,7 @@ public class GestorInstaPlus {
         try (ObjectInputStream ois = new ObjectInputStream(new FileInputStream(file))) {
             usuarios = (List<UsuarioInsta>) ois.readObject();
         } catch (EOFException e) {
-            // archivo vacío recién creado, se ignora
+            
         } catch (Exception e) {
             throw new ArchivoCorruptoException(file.getName(), e);
         }
@@ -152,21 +185,21 @@ public class GestorInstaPlus {
         usuarios.add(nuevo);
         guardarUsuarios(usuarios);
         crearArchivosPersonales(nuevo.getUsername());
-        
+       
     }
 
 
-    public static void actualizarUsuario(UsuarioInsta actualizado) throws ArchivoCorruptoException, IOException {
+    public static void actualizarUsuario(UsuarioInsta actualizado, String usernameOriginal)
+            throws ArchivoCorruptoException, IOException {
         List<UsuarioInsta> usuarios = cargarUsuarios();
         for (int i = 0; i < usuarios.size(); i++) {
-            if (usuarios.get(i).getUsername().equals(actualizado.getUsername())) {
+            if (usuarios.get(i).getUsername().equalsIgnoreCase(usernameOriginal)) {
                 usuarios.set(i, actualizado);
                 break;
             }
         }
         guardarUsuarios(usuarios);
     }
-
 
     public static void crearArchivosPersonales(String username) throws IOException {
         File carpeta = new File(rutaCarpetaInsta(username));
@@ -226,29 +259,37 @@ public class GestorInstaPlus {
     }
 
     
-    public static List<String> obtenerFollowing(String username) throws ArchivoCorruptoException {
-        return cargarListaStrings(new File(rutaCarpetaInsta(username), "following.ins"));
+    public static ListaEnlazada<String> obtenerFollowing(String username) throws ArchivoCorruptoException {
+        ListaEnlazada<String> lista = new ListaEnlazada<>();
+        for (String u : cargarListaStrings(new File(rutaCarpetaInsta(username), "following.ins"))) {
+            lista.agregar(u);
+        }
+        return lista;
     }
 
     
-    public static List<String> obtenerFollowers(String username) throws ArchivoCorruptoException {
-        return cargarListaStrings(new File(rutaCarpetaInsta(username), "followers.ins"));
+    public static ListaEnlazada<String> obtenerFollowers(String username) throws ArchivoCorruptoException {
+        ListaEnlazada<String> lista = new ListaEnlazada<>();
+        for (String u : cargarListaStrings(new File(rutaCarpetaInsta(username), "followers.ins"))) {
+            lista.agregar(u);
+        }
+        return lista;
     }
 
-    /** Cantidad de publicaciones reales del usuario (delegado a GestorPosts, que es quien las administra). */
+   
     public static int contarPublicaciones(String username) {
         return GestorPosts.contarPosts(username);
     }
 
-    
+  
     public static int contarFollowersParaMostrar(String username) throws ArchivoCorruptoException {
-        int reales = obtenerFollowers(username).size();
+        int reales = obtenerFollowers(username).tamano();
         UsuarioInsta u = buscarPorUsername(username);
         int bonus = (u != null) ? u.getSeguidoresBonus() : 0;
         return reales + bonus;
     }
 
-  
+    /** usernameSeguidor empieza a seguir a usernameSeguido (actualiza ambos archivos). */
     public static void seguirCuenta(String usernameSeguidor, String usernameSeguido)
             throws ArchivoCorruptoException, IOException {
         if (usernameSeguidor.equalsIgnoreCase(usernameSeguido)) {

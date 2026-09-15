@@ -12,6 +12,7 @@ public class PanelInstaCrearPost extends JPanel {
     private final InstaControlador controlador;
     private JLabel lblVistaPrevia;
     private JTextArea txtTexto;
+    private JLabel lblContador;
     private File archivoSeleccionado;
 
     public PanelInstaCrearPost(InstaControlador controlador) {
@@ -49,20 +50,44 @@ public class PanelInstaCrearPost extends JPanel {
         txtTexto = new JTextArea(4, 24);
         txtTexto.setLineWrap(true);
         txtTexto.setWrapStyleWord(true);
+        txtTexto.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
+            public void insertUpdate(javax.swing.event.DocumentEvent e) { actualizarContador(); }
+            public void removeUpdate(javax.swing.event.DocumentEvent e) { actualizarContador(); }
+            public void changedUpdate(javax.swing.event.DocumentEvent e) { actualizarContador(); }
+        });
         JScrollPane scrollTexto = new JScrollPane(txtTexto);
         scrollTexto.setBorder(BorderFactory.createLineBorder(TemaUI.BORDE));
         gbc.gridy = 3;
         add(scrollTexto, gbc);
 
+        JButton btnEmoji = SelectorEmojis.crearBoton(txtTexto);
+        JPanel panelBarraTexto = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));
+        panelBarraTexto.setOpaque(false);
+        panelBarraTexto.add(btnEmoji);
+        gbc.gridy = 4;
+        add(panelBarraTexto, gbc);
+
+        lblContador = new JLabel("0 / " + Post.MAX_CARACTERES + " caracteres   ·   usa # para hashtags y @ para mencionar");
+        lblContador.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        lblContador.setForeground(TemaUI.TEXTO_SUAVE);
+        gbc.gridy = 5;
+        add(lblContador, gbc);
+
         JButton btnPublicar = TemaUI.crearBotonPrimario("Publicar");
         btnPublicar.addActionListener(e -> publicar());
-        gbc.gridy = 4; gbc.gridwidth = 1; gbc.gridx = 0;
+        gbc.gridy = 6; gbc.gridwidth = 1; gbc.gridx = 0;
         add(btnPublicar, gbc);
 
         JButton btnLimpiar = new JButton("Limpiar");
         btnLimpiar.addActionListener(e -> limpiarFormulario());
         gbc.gridx = 1;
         add(btnLimpiar, gbc);
+    }
+
+    private void actualizarContador() {
+        int longitud = txtTexto.getText().length();
+        lblContador.setText(longitud + " / " + Post.MAX_CARACTERES + " caracteres   ·   usa # para hashtags y @ para mencionar");
+        lblContador.setForeground(longitud > Post.MAX_CARACTERES ? new Color(190, 40, 40) : TemaUI.TEXTO_SUAVE);
     }
 
     private void elegirImagen() {
@@ -90,6 +115,12 @@ public class PanelInstaCrearPost extends JPanel {
                     "Publicación vacía", JOptionPane.WARNING_MESSAGE);
             return;
         }
+        if (texto.length() > Post.MAX_CARACTERES) {
+            JOptionPane.showMessageDialog(this,
+                    "El texto supera el máximo de " + Post.MAX_CARACTERES + " caracteres.",
+                    "Texto demasiado largo", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
 
         String ruta = archivoSeleccionado != null ? archivoSeleccionado.getAbsolutePath() : "";
         try {
@@ -112,5 +143,6 @@ public class PanelInstaCrearPost extends JPanel {
         archivoSeleccionado = null;
         lblVistaPrevia.setIcon(null);
         lblVistaPrevia.setText("Sin imagen seleccionada");
+        actualizarContador();
     }
 }

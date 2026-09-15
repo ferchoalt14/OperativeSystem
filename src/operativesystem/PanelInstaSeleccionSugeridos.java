@@ -7,7 +7,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-
+/**
+ * Pantalla que aparece justo después de registrarse: muestra las 9 cuentas
+ * famosas y obliga a elegir al menos 4 antes de poder entrar a la app.
+ */
 public class PanelInstaSeleccionSugeridos extends JPanel {
 
     private static final int MINIMO_A_SEGUIR = 4;
@@ -62,7 +65,7 @@ public class PanelInstaSeleccionSugeridos extends JPanel {
         add(panelBoton, BorderLayout.SOUTH);
     }
 
- 
+    /** Llamar justo después de registrar la cuenta, antes de entrar a la app. */
     public void mostrarPara(UsuarioInsta usuario) {
         this.usuarioPendiente = usuario;
         checks.clear();
@@ -85,8 +88,7 @@ public class PanelInstaSeleccionSugeridos extends JPanel {
         fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
         fila.setBorder(new EmptyBorder(4, 4, 4, 4));
 
-        JLabel lblAvatar = new JLabel(TemaUI.crearIconoCircular(
-                username.substring(0, 1).toUpperCase(), TemaUI.colorApp(username.hashCode()), 36));
+        JLabel lblAvatar = new JLabel(AvatarHelper.avatarPara(username, 36));
         fila.add(lblAvatar, BorderLayout.WEST);
 
         JCheckBox chk = new JCheckBox("@" + username + "   —   " + nombre);

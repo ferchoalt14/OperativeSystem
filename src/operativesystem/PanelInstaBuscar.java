@@ -11,12 +11,18 @@ public class PanelInstaBuscar extends JPanel {
     private final InstaControlador controlador;
     private final JTextField txtBuscar;
     private final JPanel panelResultados;
+    private final JTextField txtBuscarHashtag;
+    private final JPanel panelResultadosHashtag;
 
     public PanelInstaBuscar(InstaControlador controlador) {
-        super(new BorderLayout(0, 12));
+        super(new BorderLayout());
         this.controlador = controlador;
         setOpaque(false);
         setBorder(new EmptyBorder(24, 28, 24, 28));
+
+        // --- Pestaña: Buscar personas ---
+        JPanel panelPersonas = new JPanel(new BorderLayout(0, 12));
+        panelPersonas.setOpaque(false);
 
         JLabel lblTitulo = new JLabel("Buscar personas");
         lblTitulo.setFont(new Font("SansSerif", Font.BOLD, 18));
@@ -52,8 +58,113 @@ public class PanelInstaBuscar extends JPanel {
         scroll.setBorder(null);
         scroll.getVerticalScrollBar().setUnitIncrement(14);
 
-        add(panelEncabezado, BorderLayout.NORTH);
-        add(scroll, BorderLayout.CENTER);
+        panelPersonas.add(panelEncabezado, BorderLayout.NORTH);
+        panelPersonas.add(scroll, BorderLayout.CENTER);
+
+        // --- Pestaña: Buscar hashtag ---
+        JPanel panelHashtag = new JPanel(new BorderLayout(0, 12));
+        panelHashtag.setOpaque(false);
+
+        JLabel lblTituloHashtag = new JLabel("Buscar hashtag");
+        lblTituloHashtag.setFont(new Font("SansSerif", Font.BOLD, 18));
+        lblTituloHashtag.setForeground(TemaUI.ACCENT_OSCURO);
+
+        txtBuscarHashtag = TemaUI.crearCampoTexto("Buscar por #hashtag...", 18);
+        txtBuscarHashtag.addActionListener(e -> ejecutarBusquedaHashtag());
+
+        JButton btnBuscarHashtag = TemaUI.crearBotonPrimario("Buscar");
+        btnBuscarHashtag.addActionListener(e -> ejecutarBusquedaHashtag());
+
+        JPanel panelCampoHashtag = new JPanel(new BorderLayout(8, 0));
+        panelCampoHashtag.setOpaque(false);
+        panelCampoHashtag.add(txtBuscarHashtag, BorderLayout.CENTER);
+        panelCampoHashtag.add(btnBuscarHashtag, BorderLayout.EAST);
+
+        JPanel panelEncabezadoHashtag = new JPanel();
+        panelEncabezadoHashtag.setOpaque(false);
+        panelEncabezadoHashtag.setLayout(new BoxLayout(panelEncabezadoHashtag, BoxLayout.Y_AXIS));
+        panelEncabezadoHashtag.add(lblTituloHashtag);
+        panelEncabezadoHashtag.add(Box.createVerticalStrut(10));
+        panelEncabezadoHashtag.add(panelCampoHashtag);
+
+        panelResultadosHashtag = new PanelDesplazable(new BorderLayout());
+        panelResultadosHashtag.setOpaque(false);
+        panelResultadosHashtag.setLayout(new BoxLayout(panelResultadosHashtag, BoxLayout.Y_AXIS));
+
+        JScrollPane scrollHashtag = new JScrollPane(panelResultadosHashtag);
+        scrollHashtag.setOpaque(false);
+        scrollHashtag.getViewport().setOpaque(false);
+        scrollHashtag.setBorder(null);
+        scrollHashtag.getVerticalScrollBar().setUnitIncrement(14);
+
+        panelHashtag.add(panelEncabezadoHashtag, BorderLayout.NORTH);
+        panelHashtag.add(scrollHashtag, BorderLayout.CENTER);
+
+        JTabbedPane tabs = new JTabbedPane();
+        tabs.setOpaque(false);
+        tabs.addTab("Personas", panelPersonas);
+        tabs.addTab("Hashtags", panelHashtag);
+
+        add(tabs, BorderLayout.CENTER);
+    }
+
+    private void ejecutarBusquedaHashtag() {
+        UsuarioInsta actual = controlador.getUsuarioActual();
+        if (actual == null) {
+            return;
+        }
+        String texto = txtBuscarHashtag.getText().trim();
+        if (texto.startsWith("#")) {
+            texto = texto.substring(1);
+        }
+        panelResultadosHashtag.removeAll();
+
+        if (!texto.isEmpty()) {
+            try {
+                ListaEnlazada<Post> resultados = GestorPosts.buscarPorHashtag(actual.getUsername(), texto);
+                if (resultados.estaVacia()) {
+                    JLabel lblVacio = new JLabel("No se encontraron publicaciones con #" + texto);
+                    lblVacio.setForeground(TemaUI.TEXTO_SUAVE);
+                    lblVacio.setBorder(new EmptyBorder(10, 4, 10, 4));
+                    panelResultadosHashtag.add(lblVacio);
+                } else {
+                    for (Post p : resultados) {
+                        panelResultadosHashtag.add(crearFilaPost(p));
+                        panelResultadosHashtag.add(Box.createVerticalStrut(6));
+                    }
+                }
+            } catch (ArchivoCorruptoException ex) {
+                JOptionPane.showMessageDialog(this, "No se pudo buscar el hashtag.",
+                        "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+        }
+
+        panelResultadosHashtag.revalidate();
+        panelResultadosHashtag.repaint();
+    }
+
+    private JPanel crearFilaPost(Post post) {
+        JPanel fila = new JPanel(new BorderLayout(10, 0));
+        fila.setOpaque(false);
+        fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
+        fila.setBorder(new EmptyBorder(4, 4, 4, 4));
+
+        JLabel lblAvatar = new JLabel(AvatarHelper.avatarPara(post.getUsernameAutor(), 36));
+        fila.add(lblAvatar, BorderLayout.WEST);
+
+        String resumen = post.getTexto().length() > 60 ? post.getTexto().substring(0, 60) + "…" : post.getTexto();
+        JButton btnPost = new JButton("@" + post.getUsernameAutor() + "   —   " + resumen);
+        btnPost.setContentAreaFilled(false);
+        btnPost.setBorderPainted(false);
+        btnPost.setFocusPainted(false);
+        btnPost.setHorizontalAlignment(SwingConstants.LEFT);
+        btnPost.setForeground(TemaUI.TEXTO);
+        btnPost.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnPost.addActionListener(e -> controlador.abrirPerfilAjeno(post.getUsernameAutor(), "BUSCAR"));
+        fila.add(btnPost, BorderLayout.CENTER);
+
+        return fila;
     }
 
     public void ejecutarBusqueda() {
@@ -87,14 +198,14 @@ public class PanelInstaBuscar extends JPanel {
                 lblVacio.setBorder(new EmptyBorder(10, 4, 10, 4));
                 panelResultados.add(lblVacio);
             } else {
-                List<String> misSeguidos;
+                ListaEnlazada<String> misSeguidos;
                 try {
                     misSeguidos = GestorInstaPlus.obtenerFollowing(actual.getUsername());
                 } catch (ArchivoCorruptoException ex) {
-                    misSeguidos = new ArrayList<>();
+                    misSeguidos = new ListaEnlazada<>();
                 }
                 for (String username : coincidencias) {
-                    boolean loSigo = misSeguidos.contains(username);
+                    boolean loSigo = misSeguidos.contiene(username);
                     panelResultados.add(crearFilaResultado(username, loSigo));
                     panelResultados.add(Box.createVerticalStrut(6));
                 }
@@ -111,8 +222,7 @@ public class PanelInstaBuscar extends JPanel {
         fila.setMaximumSize(new Dimension(Integer.MAX_VALUE, 48));
         fila.setBorder(new EmptyBorder(4, 4, 4, 4));
 
-        JLabel lblAvatar = new JLabel(TemaUI.crearIconoCircular(
-                username.substring(0, 1).toUpperCase(), TemaUI.colorApp(username.hashCode()), 36));
+        JLabel lblAvatar = new JLabel(AvatarHelper.avatarPara(username, 36));
         fila.add(lblAvatar, BorderLayout.WEST);
 
         JButton btnUsername = new JButton("@" + username + (loSigo ? "   —   Lo sigues" : "   —   No lo sigues"));

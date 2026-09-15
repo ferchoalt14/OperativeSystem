@@ -48,7 +48,7 @@ public class PanelInstaFeed extends JPanel {
             return;
         }
 
-        List<Post> feed;
+        ListaEnlazada<Post> feed;
         try {
             feed = GestorPosts.obtenerFeed(actual.getUsername());
         } catch (ArchivoCorruptoException ex) {
@@ -58,7 +58,7 @@ public class PanelInstaFeed extends JPanel {
             return;
         }
 
-        if (feed.isEmpty()) {
+        if (feed.estaVacia()) {
             JLabel lblVacio = new JLabel("<html><center>📷<br><br>Aún no hay publicaciones en tu feed.<br>"
                     + "Sigue cuentas para empezar a verlas aquí.</center></html>",
                     SwingConstants.CENTER);
@@ -88,9 +88,7 @@ public class PanelInstaFeed extends JPanel {
 
         JPanel encabezado = new JPanel(new BorderLayout(8, 0));
         encabezado.setOpaque(false);
-        JLabel lblAvatar = new JLabel(TemaUI.crearIconoCircular(
-                post.getUsernameAutor().substring(0, 1).toUpperCase(),
-                TemaUI.colorApp(post.getUsernameAutor().hashCode()), 34));
+        JLabel lblAvatar = new JLabel(AvatarHelper.avatarPara(post.getUsernameAutor(), 34));
         JButton btnUsername = new JButton("@" + post.getUsernameAutor());
         btnUsername.setContentAreaFilled(false);
         btnUsername.setBorderPainted(false);

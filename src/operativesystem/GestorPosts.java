@@ -73,16 +73,89 @@ public class GestorPosts {
         }
     }
 
-    
-    public static List<Post> obtenerFeed(String username) throws ArchivoCorruptoException {
-        List<Post> feed = new ArrayList<>();
+    public static Post obtenerPostPorId(String username, String postId) throws ArchivoCorruptoException {
+        for (Post p : cargarPostsDeUsuario(username)) {
+            if (p.getId().equals(postId)) {
+                return p;
+            }
+        }
+        return null;
+    }
 
-        List<String> siguiendo = GestorInstaPlus.obtenerFollowing(username);
+    /** Da o quita el like de usernameQueDaLike sobre el post. Devuelve el nuevo estado (true = quedó likeado). */
+    public static boolean alternarLike(String usernameAutorPost, String postId, String usernameQueDaLike)
+            throws ArchivoCorruptoException, IOException {
+        List<Post> posts = cargarPostsDeUsuario(usernameAutorPost);
+        boolean nuevoEstado = false;
+        for (Post p : posts) {
+            if (p.getId().equals(postId)) {
+                nuevoEstado = p.alternarLike(usernameQueDaLike);
+                break;
+            }
+        }
+        guardarPostsDeUsuario(usernameAutorPost, posts);
+        return nuevoEstado;
+    }
+
+    public static Comentario agregarComentario(String usernameAutorPost, String postId,
+            String usernameComentador, String texto) throws ArchivoCorruptoException, IOException {
+        List<Post> posts = cargarPostsDeUsuario(usernameAutorPost);
+        Comentario nuevo = new Comentario(usernameComentador, texto);
+        for (Post p : posts) {
+            if (p.getId().equals(postId)) {
+                p.agregarComentario(nuevo);
+                break;
+            }
+        }
+        guardarPostsDeUsuario(usernameAutorPost, posts);
+        return nuevo;
+    }
+
+    /** Fija el "impulso" de likes de un post (usado para sembrar likes iniciales en cuentas oficiales). */
+    public static void establecerLikesBase(String usernameAutorPost, String postId, int likesBase)
+            throws ArchivoCorruptoException, IOException {
+        List<Post> posts = cargarPostsDeUsuario(usernameAutorPost);
+        for (Post p : posts) {
+            if (p.getId().equals(postId)) {
+                p.setLikesBase(likesBase);
+                break;
+            }
+        }
+        guardarPostsDeUsuario(usernameAutorPost, posts);
+    }
+
+    
+    public static ListaEnlazada<Post> obtenerFeed(String username) throws ArchivoCorruptoException {
+        ListaEnlazada<Post> feed = new ListaEnlazada<>();
+
+        ListaEnlazada<String> siguiendo = GestorInstaPlus.obtenerFollowing(username);
         for (String cuenta : siguiendo) {
-            feed.addAll(cargarPostsDeUsuario(cuenta));
+            for (Post p : cargarPostsDeUsuario(cuenta)) {
+                feed.agregar(p);
+            }
         }
 
-        feed.sort(Comparator.comparingLong(Post::getFechaPublicacion).reversed());
+        feed.ordenarPor(Comparator.comparingLong(Post::getFechaPublicacion).reversed());
         return feed;
+    }
+
+    /** Busca posts cuyo texto contenga el hashtag indicado (sin el símbolo #). */
+    public static ListaEnlazada<Post> buscarPorHashtag(String username, String hashtag) throws ArchivoCorruptoException {
+        ListaEnlazada<Post> resultado = new ListaEnlazada<>();
+        String buscado = hashtag.toLowerCase();
+        ListaEnlazada<String> siguiendo = GestorInstaPlus.obtenerFollowing(username);
+        siguiendo.agregar(username);
+        for (String cuenta : siguiendo) {
+            for (Post p : cargarPostsDeUsuario(cuenta)) {
+                for (String tag : p.getHashtags()) {
+                    if (tag.toLowerCase().equals(buscado)) {
+                        resultado.agregar(p);
+                        break;
+                    }
+                }
+            }
+        }
+        resultado.ordenarPor(Comparator.comparingLong(Post::getFechaPublicacion).reversed());
+        return resultado;
     }
 }
