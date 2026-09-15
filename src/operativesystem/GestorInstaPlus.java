@@ -28,18 +28,84 @@ public class GestorInstaPlus {
     };
 
    
-    private static UsuarioInsta sesionActiva;
+    // ------------------------------------------------------------------------------------------
+    //  Sesión de INSTA+ POR CUENTA DEL SISTEMA OPERATIVO
+    //  Cada usuario del mini-SO tiene su propio archivo de sesión, así que si cambias de cuenta
+    //  del SO no verás la cuenta de INSTA+ de otra persona.
+    // ------------------------------------------------------------------------------------------
+    private static final String RUTA_SESIONES = RUTA_INSTA_RAIZ + "sesiones/";
 
+    /** Usuario del SO que abrió INSTA+ por última vez (solo para los métodos de compatibilidad). */
+    private static String usuarioSistemaActivo;
+
+    public static synchronized void establecerUsuarioSistema(String usuarioSO) {
+        usuarioSistemaActivo = usuarioSO;
+    }
+
+    private static File archivoSesion(String usuarioSO) {
+        String limpio = usuarioSO.toLowerCase().replaceAll("[^a-z0-9._-]", "_");
+        return new File(RUTA_SESIONES, limpio + ".ses");
+    }
+
+    /** Guarda qué cuenta de INSTA+ tiene abierta el usuario del SO indicado. */
+    public static synchronized void guardarSesion(String usuarioSO, UsuarioInsta usuario) {
+        if (usuarioSO == null || usuarioSO.isBlank() || usuario == null) {
+            return;
+        }
+        File archivo = archivoSesion(usuarioSO);
+        archivo.getParentFile().mkdirs();
+        try (DataOutputStream dos = new DataOutputStream(new FileOutputStream(archivo))) {
+            dos.writeUTF(usuario.getUsername());
+        } catch (IOException e) {
+            System.out.println("No se pudo guardar la sesión de INSTA+: " + e.getMessage());
+        }
+    }
+
+    /** Devuelve la cuenta de INSTA+ que dejó abierta ESTE usuario del SO (o null). */
+    public static synchronized UsuarioInsta obtenerSesion(String usuarioSO) {
+        if (usuarioSO == null || usuarioSO.isBlank()) {
+            return null;
+        }
+        File archivo = archivoSesion(usuarioSO);
+        if (!archivo.exists()) {
+            return null;
+        }
+        try (DataInputStream dis = new DataInputStream(new FileInputStream(archivo))) {
+            String username = dis.readUTF();
+            UsuarioInsta u = buscarPorUsername(username);
+            if (u == null) {
+                archivo.delete();
+            }
+            return u;
+        } catch (IOException | ArchivoCorruptoException e) {
+            return null;
+        }
+    }
+
+    /** Cierra la sesión de INSTA+ solo para el usuario del SO indicado. */
+    public static synchronized void cerrarSesionGuardada(String usuarioSO) {
+        if (usuarioSO == null || usuarioSO.isBlank()) {
+            return;
+        }
+        File archivo = archivoSesion(usuarioSO);
+        if (archivo.exists()) {
+            archivo.delete();
+        }
+    }
+
+    /** Compatibilidad con código viejo: usa el usuario del SO que abrió INSTA+. */
     public static void guardarSesion(UsuarioInsta usuario) {
-        sesionActiva = usuario;
+        guardarSesion(usuarioSistemaActivo, usuario);
     }
 
+    /** Compatibilidad con código viejo: usa el usuario del SO que abrió INSTA+. */
     public static UsuarioInsta obtenerSesion() {
-        return sesionActiva;
+        return obtenerSesion(usuarioSistemaActivo);
     }
 
+    /** Compatibilidad con código viejo: usa el usuario del SO que abrió INSTA+. */
     public static void cerrarSesionGuardada() {
-        sesionActiva = null;
+        cerrarSesionGuardada(usuarioSistemaActivo);
     }
 
     private static void asegurarRaiz() {
@@ -144,9 +210,7 @@ public class GestorInstaPlus {
 
     private static void guardarUsuarios(List<UsuarioInsta> usuarios) throws IOException {
         asegurarRaiz();
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(RUTA_INSTA_USERS))) {
-            oos.writeObject(usuarios);
-        }
+        ArchivosInsta.guardarObjeto(new File(RUTA_INSTA_USERS), new ArrayList<>(usuarios));
     }
 
     public static UsuarioInsta buscarPorUsername(String username) throws ArchivoCorruptoException {
@@ -253,9 +317,7 @@ public class GestorInstaPlus {
     }
 
     private static void guardarListaStrings(File archivo, List<String> lista) throws IOException {
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(archivo))) {
-            oos.writeObject(new ArrayList<Object>(lista));
-        }
+        ArchivosInsta.guardarObjeto(archivo, new ArrayList<Object>(lista));
     }
 
     
@@ -333,5 +395,51 @@ public class GestorInstaPlus {
         if (followers.remove(usernameSeguidor)) {
             guardarListaStrings(archivoFollowers, followers);
         }
+    }
+
+    // ------------------------------------------------------------------------------------------
+    //  Cambio de username: mueve la carpeta y actualiza las referencias en los demás archivos.
+    // ------------------------------------------------------------------------------------------
+    public static void renombrarUsuario(String viejo, String nuevo) throws ArchivoCorruptoException, IOException {
+        if (viejo == null || nuevo == null || viejo.equals(nuevo)) {
+            return;
+        }
+        List<UsuarioInsta> usuarios = cargarUsuarios();
+
+        File carpetaVieja = new File(rutaCarpetaInsta(viejo));
+        File carpetaNueva = new File(rutaCarpetaInsta(nuevo));
+        if (carpetaVieja.exists() && !carpetaVieja.getAbsolutePath().equals(carpetaNueva.getAbsolutePath())) {
+            if (carpetaNueva.exists() && !viejo.equalsIgnoreCase(nuevo)) {
+                throw new IOException("Ya existe una carpeta de datos para @" + nuevo + ".");
+            }
+            try {
+                java.nio.file.Files.move(carpetaVieja.toPath(), carpetaNueva.toPath());
+            } catch (IOException e) {
+                throw new IOException("No se pudo mover la carpeta de datos del usuario.", e);
+            }
+        }
+        crearArchivosPersonales(nuevo);
+
+        // following / followers de todas las cuentas
+        for (UsuarioInsta u : usuarios) {
+            String dueno = u.getUsername().equalsIgnoreCase(viejo) ? nuevo : u.getUsername();
+            for (String nombreArchivo : new String[]{"following.ins", "followers.ins"}) {
+                File archivo = new File(rutaCarpetaInsta(dueno), nombreArchivo);
+                List<String> lista = cargarListaStrings(archivo);
+                boolean cambio = false;
+                for (int i = 0; i < lista.size(); i++) {
+                    if (lista.get(i).equalsIgnoreCase(viejo)) {
+                        lista.set(i, nuevo);
+                        cambio = true;
+                    }
+                }
+                if (cambio) {
+                    guardarListaStrings(archivo, lista);
+                }
+            }
+        }
+
+        GestorPosts.renombrarUsuarioEnPosts(viejo, nuevo, usuarios);
+        GestorMensajes.renombrarUsuarioEnConversaciones(viejo, nuevo);
     }
 }

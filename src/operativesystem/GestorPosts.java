@@ -4,9 +4,12 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Random;
 
 
 public class GestorPosts {
+
+    private static final Random RANDOM_LIKES = new Random();
 
     private static File archivoPostsDe(String username) {
         return new File(GestorInstaPlus.rutaCarpetaInsta(username), "insta.ins");
@@ -41,9 +44,7 @@ public class GestorPosts {
         if (!carpeta.exists()) {
             carpeta.mkdirs();
         }
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(archivoPostsDe(username)))) {
-            oos.writeObject(new ArrayList<Object>(posts));
-        }
+        ArchivosInsta.guardarObjeto(archivoPostsDe(username), new ArrayList<Object>(posts));
     }
 
     
@@ -51,9 +52,41 @@ public class GestorPosts {
             throws ArchivoCorruptoException, IOException {
         List<Post> posts = cargarPostsDeUsuario(username);
         Post nuevo = new Post(username, texto, rutaImagen);
+
+        UsuarioInsta autor = GestorInstaPlus.buscarPorUsername(username);
+        if (autor != null && autor.isCuentaOficial()) {
+            // Toda publicación de una cuenta oficial arranca con un impulso de likes, no solo la primera.
+            int bonus = 500 + RANDOM_LIKES.nextInt(49500); // entre 500 y 50,000
+            nuevo.setLikesBase(bonus);
+        }
+
         posts.add(0, nuevo); // más reciente primero
         guardarPostsDeUsuario(username, posts);
+
+        notificarPublicacionNueva(username, nuevo);
         return nuevo;
+    }
+
+    /** Genera notificaciones de mención (a quien se etiquetó con @) y de publicación nueva (a los seguidores). */
+    private static void notificarPublicacionNueva(String username, Post nuevo) {
+        try {
+            for (String mencionado : nuevo.getMenciones()) {
+                if (!mencionado.equalsIgnoreCase(username) && GestorInstaPlus.buscarPorUsername(mencionado) != null) {
+                    GestorNotificaciones.agregarNotificacion(mencionado, TipoNotificacion.MENCION,
+                            username, "te mencionó en una publicación", nuevo.getUsernameAutor(), nuevo.getId());
+                }
+            }
+        } catch (ArchivoCorruptoException | IOException ex) {
+            
+        }
+        try {
+            for (String seguidor : GestorInstaPlus.obtenerFollowers(username)) {
+                GestorNotificaciones.agregarNotificacion(seguidor, TipoNotificacion.PUBLICACION,
+                        username, "publicó algo nuevo", nuevo.getUsernameAutor(), nuevo.getId());
+            }
+        } catch (ArchivoCorruptoException | IOException ex) {
+            
+        }
     }
 
     public static boolean eliminarPost(String username, String postId) throws ArchivoCorruptoException, IOException {
@@ -157,5 +190,41 @@ public class GestorPosts {
         }
         resultado.ordenarPor(Comparator.comparingLong(Post::getFechaPublicacion).reversed());
         return resultado;
+    }
+
+    /** Actualiza autor de posts y de comentarios cuando un usuario cambia su username. */
+    static void renombrarUsuarioEnPosts(String viejo, String nuevo, List<UsuarioInsta> usuarios)
+            throws ArchivoCorruptoException, IOException {
+        for (UsuarioInsta u : usuarios) {
+            String dueno = u.getUsername().equalsIgnoreCase(viejo) ? nuevo : u.getUsername();
+            List<Post> posts = cargarPostsDeUsuario(dueno);
+            boolean cambio = false;
+            for (Post p : posts) {
+                if (p.getUsernameAutor() != null && p.getUsernameAutor().equalsIgnoreCase(viejo)) {
+                    cambiarAutor(p, nuevo);
+                    cambio = true;
+                }
+                for (Comentario c : p.getComentarios()) {
+                    if (c.getUsernameAutor() != null && c.getUsernameAutor().equalsIgnoreCase(viejo)) {
+                        c.renombrarAutor(nuevo);
+                        cambio = true;
+                    }
+                }
+            }
+            if (cambio) {
+                guardarPostsDeUsuario(dueno, posts);
+            }
+        }
+    }
+
+    /** Post no expone un setter de autor, así que se actualiza el campo por reflexión. */
+    private static void cambiarAutor(Post post, String nuevoAutor) {
+        try {
+            java.lang.reflect.Field campo = Post.class.getDeclaredField("usernameAutor");
+            campo.setAccessible(true);
+            campo.set(post, nuevoAutor);
+        } catch (ReflectiveOperationException | RuntimeException e) {
+            System.out.println("No se pudo actualizar el autor del post " + post.getId() + ": " + e.getMessage());
+        }
     }
 }

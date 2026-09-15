@@ -197,6 +197,63 @@ public final class TemaUI {
         return boton;
     }
 
+    /**
+     * Ícono circular a partir de una imagen empaquetada en el paquete "images" del proyecto
+     * (Source Packages / images / nombreRecurso). Si el recurso no se encuentra, se usa un
+     * círculo gris de reserva para no romper la interfaz.
+     */
+    public static Icon crearIconoCircularDeRecurso(String nombreRecurso, int diametro) {
+        java.net.URL url = TemaUI.class.getResource("/images/" + nombreRecurso);
+        Image imagen = (url != null) ? new ImageIcon(url).getImage() : null;
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setClip(new Ellipse2D.Float(x, y, diametro, diametro));
+                if (imagen != null) {
+                    g2.drawImage(imagen, x, y, diametro, diametro, null);
+                } else {
+                    g2.setColor(new Color(160, 165, 170));
+                    g2.fillOval(x, y, diametro, diametro);
+                }
+                g2.dispose();
+            }
+
+            @Override
+            public int getIconWidth() {
+                return diametro;
+            }
+
+            @Override
+            public int getIconHeight() {
+                return diametro;
+            }
+        };
+    }
+
+    /** Botón de app con el logo real (imagen) en vez del círculo de color con siglas. */
+    public static JButton crearBotonAppConImagen(String nombre, String nombreRecursoImagen) {
+        JButton boton = new JButton(nombre);
+        boton.setVerticalTextPosition(SwingConstants.BOTTOM);
+        boton.setHorizontalTextPosition(SwingConstants.CENTER);
+        boton.setIcon(crearIconoCircularDeRecurso(nombreRecursoImagen, 56));
+        boton.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        boton.setForeground(TEXTO);
+        boton.setContentAreaFilled(false);
+        boton.setBorderPainted(false);
+        boton.setFocusPainted(false);
+        boton.setOpaque(false);
+        boton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        return boton;
+    }
+
+    public static JButton crearBotonAppConImagen(String nombre, String nombreRecursoImagen, ActionListener accion) {
+        JButton boton = crearBotonAppConImagen(nombre, nombreRecursoImagen);
+        boton.addActionListener(accion);
+        return boton;
+    }
+
 
     public static JPanel crearCampoPassword(JPasswordField campo) {
         JPanel panel = new JPanel(new BorderLayout(4, 0));

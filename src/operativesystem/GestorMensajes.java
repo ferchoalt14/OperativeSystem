@@ -55,9 +55,7 @@ public class GestorMensajes {
     private static void guardarConversacion(String usuarioA, String usuarioB, List<Mensaje> mensajes) throws IOException {
         asegurarCarpeta();
         File archivo = archivoConversacion(usuarioA, usuarioB);
-        try (ObjectOutputStream oos = new ObjectOutputStream(new FileOutputStream(archivo))) {
-            oos.writeObject(new ArrayList<Object>(mensajes));
-        }
+        ArchivosInsta.guardarObjeto(archivo, new ArrayList<Object>(mensajes));
     }
 
     /** Envía un mensaje de "remitente" a "destinatario" y lo guarda en la conversación de ambos. */
@@ -162,5 +160,31 @@ public class GestorMensajes {
             total += contarNoLeidosDe(username, otro);
         }
         return total;
+    }
+
+    /** Elimina por completo la conversación entre dos usuarios (borra el archivo). */
+    public static boolean eliminarConversacion(String usuarioA, String usuarioB) {
+        File archivo = archivoConversacion(usuarioA, usuarioB);
+        if (archivo.exists()) {
+            return archivo.delete();
+        }
+        return false;
+    }
+
+    /** Actualiza las conversaciones cuando un usuario cambia su username. */
+    static void renombrarUsuarioEnConversaciones(String viejo, String nuevo)
+            throws ArchivoCorruptoException, IOException {
+        for (String otro : obtenerConversaciones(viejo)) {
+            List<Mensaje> mensajes = cargarConversacion(viejo, otro);
+            for (Mensaje m : mensajes) {
+                m.renombrarUsuario(viejo, nuevo);
+            }
+            File archivoViejo = archivoConversacion(viejo, otro);
+            guardarConversacion(nuevo, otro, mensajes);
+            File archivoNuevo = archivoConversacion(nuevo, otro);
+            if (!archivoViejo.getAbsolutePath().equals(archivoNuevo.getAbsolutePath())) {
+                archivoViejo.delete();
+            }
+        }
     }
 }
