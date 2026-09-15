@@ -155,6 +155,25 @@ public class PanelInstaMensajes extends JPanel {
         fila.add(lblAvatar, BorderLayout.WEST);
         fila.add(panelTextos, BorderLayout.CENTER);
 
+        JButton btnEliminar = new JButton("🗑");
+        btnEliminar.setContentAreaFilled(false);
+        btnEliminar.setBorderPainted(false);
+        btnEliminar.setFocusPainted(false);
+        btnEliminar.setForeground(new Color(190, 40, 40));
+        btnEliminar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnEliminar.setToolTipText("Eliminar conversación");
+        btnEliminar.addActionListener(e -> {
+            int confirmacion = JOptionPane.showConfirmDialog(this,
+                    "¿Eliminar la conversación con @" + otro + "? Esta acción no se puede deshacer.",
+                    "Confirmar eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (confirmacion == JOptionPane.YES_OPTION) {
+                GestorMensajes.eliminarConversacion(usernameActual, otro);
+                refrescar();
+                controlador.refrescarMensajes();
+            }
+        });
+        fila.add(btnEliminar, BorderLayout.EAST);
+
         fila.addMouseListener(new java.awt.event.MouseAdapter() {
             @Override
             public void mouseClicked(java.awt.event.MouseEvent e) {

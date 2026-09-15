@@ -133,19 +133,79 @@ public class PanelInstaFeed extends JPanel {
         txtCaption.setFont(new Font("SansSerif", Font.PLAIN, 13));
         txtCaption.setForeground(TemaUI.TEXTO);
 
-        JLabel lblLikes = new JLabel("❤ " + post.getLikes() + " likes");
+        UsuarioInsta actual = controlador.getUsuarioActual();
+        boolean leDiLike = actual != null && post.estaLikeadoPor(actual.getUsername());
+
+        JButton btnLike = new JButton("♥");
+        btnLike.setFont(btnLike.getFont().deriveFont(Font.BOLD, 18f));
+        btnLike.setForeground(leDiLike ? new Color(220, 40, 80) : new Color(190, 190, 190));
+        btnLike.setContentAreaFilled(false);
+        btnLike.setBorderPainted(false);
+        btnLike.setFocusPainted(false);
+        btnLike.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+
+        JLabel lblLikes = new JLabel("♥ " + post.getLikes() + " likes");
         lblLikes.setForeground(TemaUI.TEXTO_SUAVE);
         lblLikes.setFont(new Font("SansSerif", Font.PLAIN, 11));
+
+        btnLike.addActionListener(e -> {
+            if (actual == null) {
+                return;
+            }
+            try {
+                GestorPosts.alternarLike(post.getUsernameAutor(), post.getId(), actual.getUsername());
+                Post actualizado = GestorPosts.obtenerPostPorId(post.getUsernameAutor(), post.getId());
+                if (actualizado != null) {
+                    boolean ahora = actualizado.estaLikeadoPor(actual.getUsername());
+                    btnLike.setForeground(ahora ? new Color(220, 40, 80) : new Color(190, 190, 190));
+                    lblLikes.setText("♥ " + actualizado.getLikes() + " likes");
+                }
+            } catch (ArchivoCorruptoException | java.io.IOException ex) {
+                JOptionPane.showMessageDialog(this, "No se pudo actualizar el like: " + ex.getMessage(),
+                        "Error", JOptionPane.ERROR_MESSAGE);
+            }
+        });
+
+        JButton btnComentar = new JButton("💬 Comentar");
+        btnComentar.setContentAreaFilled(false);
+        btnComentar.setBorderPainted(false);
+        btnComentar.setFocusPainted(false);
+        btnComentar.setForeground(TemaUI.TEXTO_SUAVE);
+        btnComentar.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        btnComentar.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnComentar.addActionListener(e -> abrirDialogoDesde(post));
+
+        JPanel panelAcciones = new JPanel(new FlowLayout(FlowLayout.LEFT, 4, 0));
+        panelAcciones.setOpaque(false);
+        panelAcciones.add(btnLike);
+        panelAcciones.add(lblLikes);
+        panelAcciones.add(Box.createHorizontalStrut(10));
+        panelAcciones.add(btnComentar);
 
         JPanel panelInferior = new JPanel(new BorderLayout());
         panelInferior.setOpaque(false);
         panelInferior.add(txtCaption, BorderLayout.CENTER);
-        panelInferior.add(lblLikes, BorderLayout.SOUTH);
+        panelInferior.add(panelAcciones, BorderLayout.SOUTH);
 
         tarjeta.add(encabezado, BorderLayout.NORTH);
         tarjeta.add(lblImagen, BorderLayout.CENTER);
         tarjeta.add(panelInferior, BorderLayout.SOUTH);
 
+        lblImagen.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        lblImagen.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                abrirDialogoDesde(post);
+            }
+        });
+
         return tarjeta;
+    }
+
+    private void abrirDialogoDesde(Post post) {
+        Window ventana = SwingUtilities.getWindowAncestor(this);
+        Frame marco = (ventana instanceof Frame) ? (Frame) ventana : null;
+        DialogoPost dialogo = new DialogoPost(marco, controlador, post, this::refrescar);
+        dialogo.setVisible(true);
     }
 }

@@ -52,7 +52,7 @@ public class PanelPostGrid extends JPanel {
         lbl.setBackground(TemaUI.FONDO);
         lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         lbl.setBorder(BorderFactory.createLineBorder(TemaUI.BORDE));
-        lbl.setToolTipText("❤ " + post.getLikes() + " likes");
+        lbl.setToolTipText("♥ " + post.getLikes() + " likes");
 
         String ruta = post.getRutaImagen();
         if (ruta != null && !ruta.isBlank() && new File(ruta).exists()) {

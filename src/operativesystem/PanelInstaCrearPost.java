@@ -47,9 +47,10 @@ public class PanelInstaCrearPost extends JPanel {
         gbc.gridy = 2;
         add(btnElegirImagen, gbc);
 
-        txtTexto = new JTextArea(4, 24);
+        txtTexto = new JTextArea(10, 30);
         txtTexto.setLineWrap(true);
         txtTexto.setWrapStyleWord(true);
+        txtTexto.setFont(new Font("SansSerif", Font.PLAIN, 14));
         txtTexto.getDocument().addDocumentListener(new javax.swing.event.DocumentListener() {
             public void insertUpdate(javax.swing.event.DocumentEvent e) { actualizarContador(); }
             public void removeUpdate(javax.swing.event.DocumentEvent e) { actualizarContador(); }
@@ -57,8 +58,14 @@ public class PanelInstaCrearPost extends JPanel {
         });
         JScrollPane scrollTexto = new JScrollPane(txtTexto);
         scrollTexto.setBorder(BorderFactory.createLineBorder(TemaUI.BORDE));
+        scrollTexto.setPreferredSize(new Dimension(420, 260));
+        scrollTexto.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         gbc.gridy = 3;
+        gbc.fill = GridBagConstraints.BOTH;
+        gbc.weighty = 1.0;
         add(scrollTexto, gbc);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+        gbc.weighty = 0;
 
         JButton btnEmoji = SelectorEmojis.crearBoton(txtTexto);
         JPanel panelBarraTexto = new JPanel(new FlowLayout(FlowLayout.RIGHT, 4, 0));

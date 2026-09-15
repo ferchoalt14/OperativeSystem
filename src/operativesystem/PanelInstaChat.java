@@ -57,6 +57,16 @@ public class PanelInstaChat extends JPanel {
 
         encabezado.add(panelIzquierda, BorderLayout.WEST);
 
+        JButton btnEliminarChat = new JButton("🗑 Eliminar chat");
+        btnEliminarChat.setContentAreaFilled(false);
+        btnEliminarChat.setBorderPainted(false);
+        btnEliminarChat.setFocusPainted(false);
+        btnEliminarChat.setForeground(new Color(190, 40, 40));
+        btnEliminarChat.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        btnEliminarChat.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        btnEliminarChat.addActionListener(e -> eliminarChatActual());
+        encabezado.add(btnEliminarChat, BorderLayout.EAST);
+
         // --- Mensajes ---
         panelMensajes = new PanelDesplazable(new BorderLayout());
         panelMensajes.setOpaque(false);
@@ -131,6 +141,22 @@ public class PanelInstaChat extends JPanel {
     /** Devuelve con quién es la conversación actualmente abierta (o null si no hay ninguna). */
     public String getUsuarioActivo() {
         return otroUsuario;
+    }
+
+    private void eliminarChatActual() {
+        UsuarioInsta actual = controlador.getUsuarioActual();
+        if (actual == null || otroUsuario == null) {
+            return;
+        }
+        int confirmacion = JOptionPane.showConfirmDialog(this,
+                "¿Eliminar toda la conversación con @" + otroUsuario + "? Esta acción no se puede deshacer.",
+                "Confirmar eliminación", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+        if (confirmacion != JOptionPane.YES_OPTION) {
+            return;
+        }
+        GestorMensajes.eliminarConversacion(actual.getUsername(), otroUsuario);
+        controlador.refrescarMensajes();
+        controlador.mostrarSeccion(seccionOrigen);
     }
 
     private void onEnviar(ActionEvent e) {

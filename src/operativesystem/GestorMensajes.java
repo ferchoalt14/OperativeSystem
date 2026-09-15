@@ -163,4 +163,13 @@ public class GestorMensajes {
         }
         return total;
     }
+
+    /** Elimina por completo la conversación entre dos usuarios (borra el archivo). */
+    public static boolean eliminarConversacion(String usuarioA, String usuarioB) {
+        File archivo = archivoConversacion(usuarioA, usuarioB);
+        if (archivo.exists()) {
+            return archivo.delete();
+        }
+        return false;
+    }
 }

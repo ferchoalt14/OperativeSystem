@@ -191,8 +191,9 @@ public class DialogoPost extends JDialog {
         UsuarioInsta actual = controlador.getUsuarioActual();
         boolean leDiLike = actual != null && post.estaLikeadoPor(actual.getUsername());
 
-        btnLike = new JButton(leDiLike ? "❤" : "🤍");
-        btnLike.setFont(btnLike.getFont().deriveFont(18f));
+        btnLike = new JButton("♥");
+        btnLike.setFont(btnLike.getFont().deriveFont(Font.BOLD, 20f));
+        btnLike.setForeground(leDiLike ? new Color(220, 40, 80) : new Color(190, 190, 190));
         btnLike.setContentAreaFilled(false);
         btnLike.setBorderPainted(false);
         btnLike.setFocusPainted(false);
@@ -217,7 +218,8 @@ public class DialogoPost extends JDialog {
             GestorPosts.alternarLike(post.getUsernameAutor(), post.getId(), actual.getUsername());
             Post actualizado = GestorPosts.obtenerPostPorId(post.getUsernameAutor(), post.getId());
             if (actualizado != null) {
-                btnLike.setText(actualizado.estaLikeadoPor(actual.getUsername()) ? "❤" : "🤍");
+                boolean leDiLikeAhora = actualizado.estaLikeadoPor(actual.getUsername());
+                btnLike.setForeground(leDiLikeAhora ? new Color(220, 40, 80) : new Color(190, 190, 190));
                 lblLikes.setText(actualizado.getLikes() + " likes");
             }
             if (alCambiar != null) {
