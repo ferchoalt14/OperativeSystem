@@ -28,14 +28,10 @@ public class GestorInstaPlus {
     };
 
    
-    // ------------------------------------------------------------------------------------------
-    //  Sesión de INSTA+ POR CUENTA DEL SISTEMA OPERATIVO
-    //  Cada usuario del mini-SO tiene su propio archivo de sesión, así que si cambias de cuenta
-    //  del SO no verás la cuenta de INSTA+ de otra persona.
-    // ------------------------------------------------------------------------------------------
+
     private static final String RUTA_SESIONES = RUTA_INSTA_RAIZ + "sesiones/";
 
-    /** Usuario del SO que abrió INSTA+ por última vez (solo para los métodos de compatibilidad). */
+    
     private static String usuarioSistemaActivo;
 
     public static synchronized void establecerUsuarioSistema(String usuarioSO) {
@@ -47,7 +43,7 @@ public class GestorInstaPlus {
         return new File(RUTA_SESIONES, limpio + ArchivosInsta.EXTENSION);
     }
 
-    /** Guarda qué cuenta de INSTA+ tiene abierta el usuario del SO indicado. */
+    
     public static synchronized void guardarSesion(String usuarioSO, UsuarioInsta usuario) {
         if (usuarioSO == null || usuarioSO.isBlank() || usuario == null) {
             return;
@@ -61,14 +57,14 @@ public class GestorInstaPlus {
         }
     }
 
-    /** Devuelve la cuenta de INSTA+ que dejó abierta ESTE usuario del SO (o null). */
+
     public static synchronized UsuarioInsta obtenerSesion(String usuarioSO) {
         if (usuarioSO == null || usuarioSO.isBlank()) {
             return null;
         }
         File archivo = archivoSesion(usuarioSO);
         if (!archivo.exists()) {
-            // Migración de compatibilidad con la versión anterior.
+    
             String limpio = usuarioSO.toLowerCase().replaceAll("[^a-z0-9._-]", "_");
             File anterior = new File(RUTA_SESIONES, limpio + ".ses");
             if (anterior.exists()) {
@@ -93,7 +89,7 @@ public class GestorInstaPlus {
         }
     }
 
-    /** Cierra la sesión de INSTA+ solo para el usuario del SO indicado. */
+
     public static synchronized void cerrarSesionGuardada(String usuarioSO) {
         if (usuarioSO == null || usuarioSO.isBlank()) {
             return;
@@ -104,17 +100,17 @@ public class GestorInstaPlus {
         }
     }
 
-    /** Compatibilidad con código viejo: usa el usuario del SO que abrió INSTA+. */
+
     public static void guardarSesion(UsuarioInsta usuario) {
         guardarSesion(usuarioSistemaActivo, usuario);
     }
 
-    /** Compatibilidad con código viejo: usa el usuario del SO que abrió INSTA+. */
+
     public static UsuarioInsta obtenerSesion() {
         return obtenerSesion(usuarioSistemaActivo);
     }
 
-    /** Compatibilidad con código viejo: usa el usuario del SO que abrió INSTA+. */
+
     public static void cerrarSesionGuardada() {
         cerrarSesionGuardada(usuarioSistemaActivo);
     }
@@ -143,7 +139,7 @@ public class GestorInstaPlus {
         asegurarCuentasPorDefecto();
     }
 
-    /** Migra una sola vez archivos .ins de la estructura anterior a la extensión propia .sop. */
+
     private static void migrarArchivosInstaAntiguos() {
         File raiz = new File(RUTA_INSTA_RAIZ);
         File usuariosViejos = new File(raiz, "usuarios.ins");
@@ -286,6 +282,47 @@ public class GestorInstaPlus {
     }
 
 
+
+
+    /** ¿La cuenta existe y está activa? */
+    public static boolean estaActiva(String username) {
+        if (username == null) {
+            return false;
+        }
+        try {
+            UsuarioInsta u = buscarPorUsername(username);
+            return u != null && u.isActiva();
+        } catch (ArchivoCorruptoException e) {
+            return true; // si no se puede leer el archivo, no ocultamos nada por error
+        }
+    }
+
+   
+    public static java.util.Set<String> usernamesDesactivados() {
+        java.util.Set<String> desactivados = new java.util.HashSet<>();
+        try {
+            for (UsuarioInsta u : cargarUsuarios()) {
+                if (!u.isActiva()) {
+                    desactivados.add(u.getUsername().toLowerCase());
+                }
+            }
+        } catch (ArchivoCorruptoException e) {
+            // sin datos: no se oculta nada
+        }
+        return desactivados;
+    }
+
+   
+    public static UsuarioInsta verificarCredenciales(String username, String password)
+            throws ArchivoCorruptoException {
+        for (UsuarioInsta u : cargarUsuarios()) {
+            if (u.getUsername().equals(username) && u.getPassword().equals(password)) {
+                return u;
+            }
+        }
+        return null;
+    }
+
     public static UsuarioInsta autenticar(String username, String password)
             throws CuentaDesactivadaException, ArchivoCorruptoException {
         List<UsuarioInsta> usuarios = cargarUsuarios();
@@ -393,19 +430,27 @@ public class GestorInstaPlus {
     }
 
     
+   
     public static ListaEnlazada<String> obtenerFollowing(String username) throws ArchivoCorruptoException {
+        java.util.Set<String> desactivados = usernamesDesactivados();
         ListaEnlazada<String> lista = new ListaEnlazada<>();
         for (String u : cargarListaStrings(new File(rutaCarpetaInsta(username), "following" + ArchivosInsta.EXTENSION))) {
-            lista.agregar(u);
+            if (!desactivados.contains(u.toLowerCase())) {
+                lista.agregar(u);
+            }
         }
         return lista;
     }
 
     
+    
     public static ListaEnlazada<String> obtenerFollowers(String username) throws ArchivoCorruptoException {
+        java.util.Set<String> desactivados = usernamesDesactivados();
         ListaEnlazada<String> lista = new ListaEnlazada<>();
         for (String u : cargarListaStrings(new File(rutaCarpetaInsta(username), "followers" + ArchivosInsta.EXTENSION))) {
-            lista.agregar(u);
+            if (!desactivados.contains(u.toLowerCase())) {
+                lista.agregar(u);
+            }
         }
         return lista;
     }
@@ -423,7 +468,7 @@ public class GestorInstaPlus {
         return reales + bonus;
     }
 
-    /** usernameSeguidor empieza a seguir a usernameSeguido (actualiza ambos archivos). */
+
     public static void seguirCuenta(String usernameSeguidor, String usernameSeguido)
             throws ArchivoCorruptoException, IOException {
         if (usernameSeguidor.equalsIgnoreCase(usernameSeguido)) {

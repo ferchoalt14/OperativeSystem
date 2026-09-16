@@ -11,16 +11,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 
-/**
- * Servidor de INSTA+ basado en sockets TCP.
- *
- * Todo lo que es "tiempo real" pasa por aquí: mensajes directos, lecturas (✓✓), comentarios,
- * likes, publicaciones nuevas, eliminaciones y menciones. El servidor guarda en disco usando los
- * gestores y luego avisa (push) a los clientes conectados que les interesa el cambio.
- *
- * Se levanta automáticamente la primera vez que un {@link ClienteInsta} se conecta. Si otro proceso
- * ya tiene el puerto ocupado, este proceso simplemente se conecta como cliente a ese servidor.
- */
+
 public final class ServidorInsta {
 
     public static final int PUERTO = 5055;
@@ -35,10 +26,7 @@ public final class ServidorInsta {
         this.serverSocket = serverSocket;
     }
 
-    /**
-     * Inicia el servidor si todavía no está corriendo en este proceso.
-     * @return true si el servidor quedó corriendo en este proceso.
-     */
+    
     public static synchronized boolean iniciar() {
         if (instancia != null) {
             return true;
@@ -52,7 +40,7 @@ public final class ServidorInsta {
             System.out.println("[INSTA+] Servidor de sockets escuchando en todas las interfaces, puerto " + PUERTO);
             return true;
         } catch (IOException e) {
-            // Puerto ocupado: normalmente otra instancia del sistema ya es el servidor.
+           
             return false;
         }
     }
@@ -80,9 +68,7 @@ public final class ServidorInsta {
         }
     }
 
-    // ------------------------------------------------------------------------------------------
-    //  Registro de conexiones
-    // ------------------------------------------------------------------------------------------
+ 
 
     private static String clave(String username) {
         return username == null ? "" : username.toLowerCase();
@@ -105,7 +91,7 @@ public final class ServidorInsta {
         }
     }
 
-    /** Envía el paquete a todas las conexiones de cada usuario indicado (sin repetir usuarios). */
+  
     private void enviarA(PaqueteInsta paquete, String... usernames) {
         enviarA(paquete, Arrays.asList(usernames));
     }
@@ -133,14 +119,17 @@ public final class ServidorInsta {
         }
     }
 
-    // ------------------------------------------------------------------------------------------
-    //  Lógica de cada solicitud
-    // ------------------------------------------------------------------------------------------
+
 
     private void procesar(Conexion c, PaqueteInsta p) {
         long id = p.getIdSolicitud();
         String yo = c.usuario;
         try {
+            // Una cuenta desactivada no puede publicar, comentar, dar like ni mandar mensajes.
+            if (!GestorInstaPlus.estaActiva(yo)) {
+                c.enviar(PaqueteInsta.error(id, "Tu cuenta está desactivada. Reactívala en Editar perfil para poder interactuar."));
+                return;
+            }
             synchronized (candadoDatos) {
                 switch (p.getTipo()) {
                     case ENVIAR_MENSAJE:
@@ -193,8 +182,8 @@ public final class ServidorInsta {
             c.enviar(PaqueteInsta.error(id, "El mensaje es demasiado largo (máx. 1000 caracteres)."));
             return;
         }
-        if (GestorInstaPlus.buscarPorUsername(para) == null) {
-            c.enviar(PaqueteInsta.error(id, "La cuenta @" + para + " ya no existe."));
+        if (!GestorInstaPlus.estaActiva(para)) {
+            c.enviar(PaqueteInsta.error(id, "La cuenta @" + para + " no está disponible."));
             return;
         }
         GestorMensajes.enviarMensaje(yo, para, texto);
@@ -243,8 +232,8 @@ public final class ServidorInsta {
             c.enviar(PaqueteInsta.error(id, "El comentario es demasiado largo (máx. 300 caracteres)."));
             return;
         }
-        if (GestorPosts.obtenerPostPorId(autor, postId) == null) {
-            c.enviar(PaqueteInsta.error(id, "Esta publicación ya no existe."));
+        if (!GestorInstaPlus.estaActiva(autor) || GestorPosts.obtenerPostPorId(autor, postId) == null) {
+            c.enviar(PaqueteInsta.error(id, "Esta publicación ya no está disponible."));
             return;
         }
         GestorPosts.agregarComentario(autor, postId, yo, texto);
@@ -258,8 +247,8 @@ public final class ServidorInsta {
             throws ArchivoCorruptoException, IOException {
         String autor = p.getOVacio(PaqueteInsta.AUTOR_POST);
         String postId = p.getOVacio(PaqueteInsta.POST_ID);
-        if (GestorPosts.obtenerPostPorId(autor, postId) == null) {
-            c.enviar(PaqueteInsta.error(id, "Esta publicación ya no existe."));
+        if (!GestorInstaPlus.estaActiva(autor) || GestorPosts.obtenerPostPorId(autor, postId) == null) {
+            c.enviar(PaqueteInsta.error(id, "Esta publicación ya no está disponible."));
             return;
         }
         boolean likeado = GestorPosts.alternarLike(autor, postId, yo);
@@ -317,7 +306,7 @@ public final class ServidorInsta {
         enviarA(evento, destinatarios);
 
         for (String mencionado : nuevo.getMenciones()) {
-            if (!mencionado.equalsIgnoreCase(yo)) {
+            if (!mencionado.equalsIgnoreCase(yo) && GestorInstaPlus.estaActiva(mencionado)) {
                 enviarA(new PaqueteInsta(PaqueteInsta.Tipo.MENCION)
                         .con(PaqueteInsta.DE, yo).con(PaqueteInsta.AUTOR_POST, yo)
                         .con(PaqueteInsta.POST_ID, nuevo.getId()), mencionado);
@@ -328,7 +317,7 @@ public final class ServidorInsta {
     private void procesarEliminarPost(Conexion c, PaqueteInsta p, String yo, long id)
             throws ArchivoCorruptoException, IOException {
         String postId = p.getOVacio(PaqueteInsta.POST_ID);
-        // Solo el autor puede eliminar: siempre se busca en la carpeta del usuario conectado.
+        
         if (!GestorPosts.eliminarPost(yo, postId)) {
             c.enviar(PaqueteInsta.error(id, "No se encontró la publicación (quizá ya fue eliminada)."));
             return;
@@ -338,9 +327,6 @@ public final class ServidorInsta {
                 .con(PaqueteInsta.DE, yo).con(PaqueteInsta.AUTOR_POST, yo).con(PaqueteInsta.POST_ID, postId));
     }
 
-    // ------------------------------------------------------------------------------------------
-    //  Conexión individual (un hilo por cliente)
-    // ------------------------------------------------------------------------------------------
 
     private final class Conexion extends Thread {
 
@@ -417,7 +403,7 @@ public final class ServidorInsta {
             try {
                 socket.close();
             } catch (IOException ignored) {
-                // nada que hacer
+               
             }
         }
     }

@@ -55,7 +55,7 @@ public class GestorPosts {
 
         UsuarioInsta autor = GestorInstaPlus.buscarPorUsername(username);
         if (autor != null && autor.isCuentaOficial()) {
-            // Toda publicación de una cuenta oficial arranca con un impulso de likes, no solo la primera.
+
             int bonus = 500 + RANDOM_LIKES.nextInt(49500); // entre 500 y 50,000
             nuevo.setLikesBase(bonus);
         }
@@ -67,11 +67,11 @@ public class GestorPosts {
         return nuevo;
     }
 
-    /** Genera notificaciones de mención (a quien se etiquetó con @) y de publicación nueva (a los seguidores). */
+
     private static void notificarPublicacionNueva(String username, Post nuevo) {
         try {
             for (String mencionado : nuevo.getMenciones()) {
-                if (!mencionado.equalsIgnoreCase(username) && GestorInstaPlus.buscarPorUsername(mencionado) != null) {
+                if (!mencionado.equalsIgnoreCase(username) && GestorInstaPlus.estaActiva(mencionado)) {
                     GestorNotificaciones.agregarNotificacion(mencionado, TipoNotificacion.MENCION,
                             username, "te mencionó en una publicación", nuevo.getUsernameAutor(), nuevo.getId());
                 }
@@ -115,7 +115,7 @@ public class GestorPosts {
         return null;
     }
 
-    /** Da o quita el like de usernameQueDaLike sobre el post. Devuelve el nuevo estado (true = quedó likeado). */
+
     public static boolean alternarLike(String usernameAutorPost, String postId, String usernameQueDaLike)
             throws ArchivoCorruptoException, IOException {
         List<Post> posts = cargarPostsDeUsuario(usernameAutorPost);
@@ -144,7 +144,7 @@ public class GestorPosts {
         return nuevo;
     }
 
-    /** Fija el "impulso" de likes de un post (usado para sembrar likes iniciales en cuentas oficiales). */
+   
     public static void establecerLikesBase(String usernameAutorPost, String postId, int likesBase)
             throws ArchivoCorruptoException, IOException {
         List<Post> posts = cargarPostsDeUsuario(usernameAutorPost);
@@ -158,6 +158,23 @@ public class GestorPosts {
     }
 
     
+
+    public static List<Comentario> comentariosVisibles(Post post) {
+        List<Comentario> visibles = new ArrayList<>();
+        if (post == null) {
+            return visibles;
+        }
+        java.util.Set<String> desactivados = GestorInstaPlus.usernamesDesactivados();
+        for (Comentario c : post.getComentarios()) {
+            String autor = c.getUsernameAutor();
+            if (autor == null || !desactivados.contains(autor.toLowerCase())) {
+                visibles.add(c);
+            }
+        }
+        return visibles;
+    }
+
+  
     public static ListaEnlazada<Post> obtenerFeed(String username) throws ArchivoCorruptoException {
         ListaEnlazada<Post> feed = new ListaEnlazada<>();
 
@@ -172,7 +189,7 @@ public class GestorPosts {
         return feed;
     }
 
-    /** Busca posts cuyo texto contenga el hashtag indicado (sin el símbolo #). */
+
     public static ListaEnlazada<Post> buscarPorHashtag(String username, String hashtag) throws ArchivoCorruptoException {
         ListaEnlazada<Post> resultado = new ListaEnlazada<>();
         String buscado = hashtag.toLowerCase();
@@ -192,7 +209,7 @@ public class GestorPosts {
         return resultado;
     }
 
-    /** Actualiza autor de posts y de comentarios cuando un usuario cambia su username. */
+  
     static void renombrarUsuarioEnPosts(String viejo, String nuevo, List<UsuarioInsta> usuarios)
             throws ArchivoCorruptoException, IOException {
         for (UsuarioInsta u : usuarios) {
@@ -217,7 +234,7 @@ public class GestorPosts {
         }
     }
 
-    /** Post no expone un setter de autor, así que se actualiza el campo por reflexión. */
+
     private static void cambiarAutor(Post post, String nuevoAutor) {
         try {
             java.lang.reflect.Field campo = Post.class.getDeclaredField("usernameAutor");

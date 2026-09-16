@@ -283,7 +283,8 @@ public class PanelInstaEditarPerfil extends JPanel {
             confirmacion.preguntar("¿Seguro que quieres desactivar tu cuenta? No aparecerás en búsquedas "
                     + "ni se mostrarán tus publicaciones mientras esté desactivada.", "Desactivar", this::alternarEstadoCuenta);
         } else {
-            confirmacion.preguntarPositivo("¿Quieres reactivar tu cuenta?", "Reactivar", this::alternarEstadoCuenta);
+            // Si ya está desactivada, se reactiva directo (sin pedir confirmación).
+            alternarEstadoCuenta();
         }
     }
 
@@ -297,7 +298,12 @@ public class PanelInstaEditarPerfil extends JPanel {
             actual.setActiva(!estabaActiva);
             GestorInstaPlus.actualizarUsuario(actual, actual.getUsername());
             actualizarEstado(actual);
-            mensajeEstado.exito(estabaActiva ? "Tu cuenta fue desactivada." : "¡Tu cuenta fue reactivada!");
+            // Avisa a la pantalla principal para bloquear o desbloquear el menú.
+            controlador.usuarioActualizado(actual.getUsername());
+            controlador.mostrarSeccion("EDITAR_PERFIL");
+            mensajeEstado.exito(estabaActiva
+                    ? "Tu cuenta fue desactivada. Solo podrás entrar para reactivarla."
+                    : "¡Tu cuenta fue reactivada! Ya puedes usar INSTA+ normalmente.");
         } catch (ArchivoCorruptoException | IOException ex) {
             actual.setActiva(estabaActiva);
             mensajeEstado.error("No se pudo actualizar el estado de la cuenta: " + ex.getMessage());

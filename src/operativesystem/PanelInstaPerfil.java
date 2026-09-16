@@ -232,17 +232,65 @@ public class PanelInstaPerfil extends JPanel {
         JFileChooser chooser = new JFileChooser();
         chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter(
                 "Imágenes (.png, .jpg)", "png", "jpg", "jpeg"));
-        if (chooser.showOpenDialog(this) == JFileChooser.APPROVE_OPTION) {
-            File archivo = chooser.getSelectedFile();
-            actual.setRutaFotoPerfil(archivo.getAbsolutePath());
-            try {
-                GestorInstaPlus.actualizarUsuario(actual, actual.getUsername());
-                refrescar();
-            } catch (ArchivoCorruptoException | IOException ex) {
-                JOptionPane.showMessageDialog(this,
-                        "No se pudo guardar la foto de perfil: " + ex.getMessage(),
-                        "Error", JOptionPane.ERROR_MESSAGE);
+        if (chooser.showOpenDialog(this) != JFileChooser.APPROVE_OPTION) {
+            return;
+        }
+
+        File archivo = chooser.getSelectedFile();
+        String rutaAnterior = actual.getRutaFotoPerfil();
+        String rutaNueva = copiarFotoAlSistema(archivo);
+
+        actual.setRutaFotoPerfil(rutaNueva);
+        try {
+            
+            GestorInstaPlus.actualizarUsuario(actual, actual.getUsername());
+            borrarFotoAnteriorSiEsCopia(rutaAnterior, rutaNueva);
+            refrescar();
+            controlador.refrescarFeed();
+        } catch (ArchivoCorruptoException | IOException ex) {
+            actual.setRutaFotoPerfil(rutaAnterior);
+            JOptionPane.showMessageDialog(this,
+                    "No se pudo guardar la foto de perfil: " + ex.getMessage(),
+                    "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    
+    private File carpetaFotosPerfil() {
+        UsuarioInsta actual = controlador.getUsuarioActual();
+        String usuario = actual != null ? actual.getUsername() : "tmp";
+        File raizInsta = new File(GestorInstaPlus.rutaCarpetaInsta(usuario)).getParentFile();
+        return new File(raizInsta, "fotos_perfil");
+    }
+
+    private String copiarFotoAlSistema(File origen) {
+        try {
+            File carpeta = carpetaFotosPerfil();
+            carpeta.mkdirs();
+            String nombre = System.currentTimeMillis() + "_" + origen.getName().replaceAll("[^A-Za-z0-9._-]", "_");
+            File destino = new File(carpeta, nombre);
+            java.nio.file.Files.copy(origen.toPath(), destino.toPath(),
+                    java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return destino.getAbsolutePath();
+        } catch (IOException | RuntimeException ex) {
+            System.out.println("No se pudo copiar la foto de perfil, se usa la ruta original: " + ex.getMessage());
+            return origen.getAbsolutePath();
+        }
+    }
+
+    
+    private void borrarFotoAnteriorSiEsCopia(String rutaAnterior, String rutaNueva) {
+        if (rutaAnterior == null || rutaAnterior.isBlank() || rutaAnterior.equals(rutaNueva)) {
+            return;
+        }
+        try {
+            File anterior = new File(rutaAnterior).getCanonicalFile();
+            File carpeta = carpetaFotosPerfil().getCanonicalFile();
+            if (carpeta.equals(anterior.getParentFile())) {
+                anterior.delete();
             }
+        } catch (IOException ignored) {
+           
         }
     }
 }

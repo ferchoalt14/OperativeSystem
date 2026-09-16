@@ -4,7 +4,7 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-/** Maneja las conversaciones (DMs) entre usuarios de INSTA+. */
+
 public class GestorMensajes {
 
     private static final String RUTA_CONVERSACIONES =
@@ -17,7 +17,7 @@ public class GestorMensajes {
         }
     }
 
-    /** Nombre de archivo determinístico para la conversación entre dos usuarios (sin importar el orden). */
+    
     private static File archivoConversacion(String usuarioA, String usuarioB) {
         String u1 = usuarioA.toLowerCase();
         String u2 = usuarioB.toLowerCase();
@@ -58,7 +58,7 @@ public class GestorMensajes {
         ArchivosInsta.guardarObjeto(archivo, new ArrayList<Object>(mensajes));
     }
 
-    /** Envía un mensaje de "remitente" a "destinatario" y lo guarda en la conversación de ambos. */
+    
     public static Mensaje enviarMensaje(String remitente, String destinatario, String texto)
             throws ArchivoCorruptoException, IOException {
         List<Mensaje> mensajes = cargarConversacion(remitente, destinatario);
@@ -68,7 +68,7 @@ public class GestorMensajes {
         return nuevo;
     }
 
-    /** Marca como leídos todos los mensajes que "usuarioQueLee" recibió de "otroUsuario". */
+   
     public static void marcarComoLeidos(String usuarioQueLee, String otroUsuario)
             throws ArchivoCorruptoException, IOException {
         List<Mensaje> mensajes = cargarConversacion(usuarioQueLee, otroUsuario);
@@ -84,7 +84,7 @@ public class GestorMensajes {
         }
     }
 
-    /** Cuenta los mensajes no leídos que "username" tiene pendientes de "otroUsuario". */
+   
     public static int contarNoLeidosDe(String username, String otroUsuario) throws ArchivoCorruptoException {
         int cuenta = 0;
         for (Mensaje m : cargarConversacion(username, otroUsuario)) {
@@ -95,9 +95,20 @@ public class GestorMensajes {
         return cuenta;
     }
 
-    /** Lista, para "username", todas las personas con las que tiene conversación, ordenadas por mensaje más reciente. */
+  
     public static ListaEnlazada<String> obtenerConversaciones(String username) throws ArchivoCorruptoException {
+        return obtenerConversaciones(username, false);
+    }
+
+    /**
+     * @param incluirDesactivadas 
+     *                            
+     */
+    private static ListaEnlazada<String> obtenerConversaciones(String username, boolean incluirDesactivadas)
+            throws ArchivoCorruptoException {
         asegurarCarpeta();
+        java.util.Set<String> desactivados = incluirDesactivadas
+                ? new java.util.HashSet<>() : GestorInstaPlus.usernamesDesactivados();
         String prefijo = "conv_";
         File carpeta = new File(RUTA_CONVERSACIONES);
         File[] archivos = carpeta.listFiles((dir, nombre) -> nombre.startsWith(prefijo) && nombre.endsWith(ArchivosInsta.EXTENSION));
@@ -119,7 +130,7 @@ public class GestorMensajes {
                 } else if (partes[1].equals(buscado)) {
                     otro = partes[0];
                 }
-                if (otro == null) {
+                if (otro == null || desactivados.contains(otro)) {
                     continue;
                 }
                 List<Mensaje> mensajes = cargarConversacion(username, otro);
@@ -132,7 +143,7 @@ public class GestorMensajes {
             }
         }
 
-        // Ordenar por fecha del último mensaje, más reciente primero (selection sort simple).
+  
         for (int i = 0; i < otros.size() - 1; i++) {
             int mejor = i;
             for (int j = i + 1; j < otros.size(); j++) {
@@ -153,7 +164,7 @@ public class GestorMensajes {
         return resultado;
     }
 
-    /** Total de mensajes no leídos de "username" sumando todas sus conversaciones (para el contador/badge). */
+
     public static int contarNoLeidosTotal(String username) throws ArchivoCorruptoException {
         int total = 0;
         for (String otro : obtenerConversaciones(username)) {
@@ -162,7 +173,7 @@ public class GestorMensajes {
         return total;
     }
 
-    /** Elimina por completo la conversación entre dos usuarios (borra el archivo). */
+
     public static boolean eliminarConversacion(String usuarioA, String usuarioB) {
         File archivo = archivoConversacion(usuarioA, usuarioB);
         if (archivo.exists()) {
@@ -171,10 +182,10 @@ public class GestorMensajes {
         return false;
     }
 
-    /** Actualiza las conversaciones cuando un usuario cambia su username. */
+
     static void renombrarUsuarioEnConversaciones(String viejo, String nuevo)
             throws ArchivoCorruptoException, IOException {
-        for (String otro : obtenerConversaciones(viejo)) {
+        for (String otro : obtenerConversaciones(viejo, true)) {
             List<Mensaje> mensajes = cargarConversacion(viejo, otro);
             for (Mensaje m : mensajes) {
                 m.renombrarUsuario(viejo, nuevo);

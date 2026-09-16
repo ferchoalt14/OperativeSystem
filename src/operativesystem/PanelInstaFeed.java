@@ -14,7 +14,7 @@ public class PanelInstaFeed extends JPanel {
     private final JPanel panelPosts;
     private final JScrollPane scroll;
 
-    /** Referencias a los controles de cada tarjeta para actualizarlas en vivo (eventos del socket). */
+
     private final Map<String, Tarjeta> tarjetas = new HashMap<>();
 
     private static final class Tarjeta {
@@ -55,7 +55,7 @@ public class PanelInstaFeed extends JPanel {
         return autor.toLowerCase() + "|" + postId;
     }
 
-    /** Vuelve a cargar el feed desde disco y redibuja las tarjetas de posts. */
+    
     public void refrescar() {
         int posicion = scroll.getVerticalScrollBar().getValue();
         panelPosts.removeAll();
@@ -115,7 +115,7 @@ public class PanelInstaFeed extends JPanel {
                 return;
             }
             pintarLike(t, p.estaLikeadoPor(actual.getUsername()), p.getLikes());
-            t.btnComentarios.setText("💬 " + p.getComentarios().size());
+            t.btnComentarios.setText("💬 " + GestorPosts.comentariosVisibles(p).size());
         } catch (ArchivoCorruptoException ex) {
             // se actualizará en el próximo refresco
         }
@@ -190,7 +190,7 @@ public class PanelInstaFeed extends JPanel {
         pintarLike(refs, post.estaLikeadoPor(actual.getUsername()), post.getLikes());
         refs.btnLike.addActionListener(e -> alternarLike(post, refs));
 
-        refs.btnComentarios = EstiloInsta.botonTexto("💬 " + post.getComentarios().size(), TemaUI.TEXTO_SUAVE, 12, false);
+        refs.btnComentarios = EstiloInsta.botonTexto("💬 " + GestorPosts.comentariosVisibles(post).size(), TemaUI.TEXTO_SUAVE, 12, false);
         refs.btnComentarios.setToolTipText("Ver y escribir comentarios");
         refs.btnComentarios.addActionListener(e ->
                 controlador.abrirPost(post, () -> actualizarPost(post.getUsernameAutor(), post.getId())));

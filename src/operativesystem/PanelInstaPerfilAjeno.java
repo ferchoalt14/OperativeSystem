@@ -17,6 +17,7 @@ public class PanelInstaPerfilAjeno extends JPanel {
     private String seccionOrigen = "PERFIL";
 
     private final JLabel lblAvatar, lblNombreCompleto, lblUsername;
+    private final JLabel lblDescripcion;
     private final JLabel lblPosts, lblFollowers, lblFollowing;
     private final JButton btnSeguir;
 
@@ -56,6 +57,13 @@ public class PanelInstaPerfilAjeno extends JPanel {
         lblUsername.setForeground(TemaUI.TEXTO_SUAVE);
         lblUsername.setAlignmentX(Component.CENTER_ALIGNMENT);
 
+        // Descripción (bio) del usuario visitado
+        lblDescripcion = new JLabel("", SwingConstants.CENTER);
+        lblDescripcion.setFont(new Font("SansSerif", Font.PLAIN, 13));
+        lblDescripcion.setForeground(TemaUI.TEXTO);
+        lblDescripcion.setAlignmentX(Component.CENTER_ALIGNMENT);
+        lblDescripcion.setVisible(false);
+
         lblPosts = crearEtiquetaStat();
         lblFollowers = crearEtiquetaStat();
         lblFollowing = crearEtiquetaStat();
@@ -91,6 +99,8 @@ public class PanelInstaPerfilAjeno extends JPanel {
         panelEncabezado.add(Box.createVerticalStrut(10));
         panelEncabezado.add(lblNombreCompleto);
         panelEncabezado.add(lblUsername);
+        panelEncabezado.add(Box.createVerticalStrut(6));
+        panelEncabezado.add(lblDescripcion);
         panelEncabezado.add(Box.createVerticalStrut(14));
         panelEncabezado.add(panelStats);
         panelEncabezado.add(Box.createVerticalStrut(16));
@@ -162,7 +172,8 @@ public class PanelInstaPerfilAjeno extends JPanel {
 
         try {
             UsuarioInsta perfil = GestorInstaPlus.buscarPorUsername(username);
-            if (perfil == null) {
+            if (perfil == null || !perfil.isActiva()) {
+                // Una cuenta desactivada se comporta como si no existiera.
                 JOptionPane.showMessageDialog(this, "No se encontró la cuenta @" + username,
                         "Cuenta no disponible", JOptionPane.WARNING_MESSAGE);
                 return;
@@ -170,6 +181,17 @@ public class PanelInstaPerfilAjeno extends JPanel {
 
             lblNombreCompleto.setText(perfil.getNombreCompleto());
             lblUsername.setText("@" + perfil.getUsername());
+
+            // Mostrar la descripción que la otra persona guardó en su perfil
+            String descripcion = perfil.getDescripcion();
+            if (descripcion == null || descripcion.isBlank()) {
+                lblDescripcion.setText("");
+                lblDescripcion.setVisible(false);
+            } else {
+                String html = EstiloInsta.escaparHtml(descripcion.trim()).replace("\n", "<br>");
+                lblDescripcion.setText("<html><div style='text-align:center; width:320px;'>" + html + "</div></html>");
+                lblDescripcion.setVisible(true);
+            }
 
             String ruta = perfil.getRutaFotoPerfil();
             if (ruta != null && !ruta.isBlank() && new File(ruta).exists()) {

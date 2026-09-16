@@ -22,7 +22,7 @@ public class PanelInstaLogin extends JPanel {
         gbc.insets = new Insets(8, 8, 8, 8);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        JLabel lblIcono = new JLabel(TemaUI.crearIconoCircular("IG", TemaUI.colorApp(1), 64));
+        JLabel lblIcono = new JLabel(cargarLogo(96));
         lblIcono.setHorizontalAlignment(SwingConstants.CENTER);
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         add(lblIcono, gbc);
@@ -59,6 +59,46 @@ public class PanelInstaLogin extends JPanel {
         add(btnIrRegistro, gbc);
     }
 
+    /**
+     * Carga el logo de INSTA+ desde el paquete "images" (images/insta.png) y lo escala
+     * sin deformarlo. Si no se encuentra, muestra el círculo "IG" de siempre.
+     */
+    private static Icon cargarLogo(int tamanoMaximo) {
+        Image imagen = null;
+
+        // 1) Dentro del classpath (Source Packages / images / insta.png)
+        java.net.URL url = PanelInstaLogin.class.getResource("/images/insta.png");
+        if (url != null) {
+            imagen = new ImageIcon(url).getImage();
+        } else {
+            // 2) Respaldo: buscar el archivo en la carpeta del proyecto
+            String[] rutas = {"images/insta.png", "src/images/insta.png"};
+            for (String ruta : rutas) {
+                java.io.File archivo = new java.io.File(ruta);
+                if (archivo.isFile()) {
+                    imagen = new ImageIcon(archivo.getAbsolutePath()).getImage();
+                    break;
+                }
+            }
+        }
+
+        if (imagen == null) {
+            System.err.println("[INSTA+] No se encontró images/insta.png, se usa el ícono por defecto.");
+            return TemaUI.crearIconoCircular("IG", TemaUI.colorApp(1), 64);
+        }
+
+        ImageIcon original = new ImageIcon(imagen);
+        int ancho = original.getIconWidth();
+        int alto = original.getIconHeight();
+        if (ancho <= 0 || alto <= 0) {
+            return TemaUI.crearIconoCircular("IG", TemaUI.colorApp(1), 64);
+        }
+        double escala = Math.min((double) tamanoMaximo / ancho, (double) tamanoMaximo / alto);
+        int nuevoAncho = Math.max(1, (int) Math.round(ancho * escala));
+        int nuevoAlto = Math.max(1, (int) Math.round(alto * escala));
+        return new ImageIcon(imagen.getScaledInstance(nuevoAncho, nuevoAlto, Image.SCALE_SMOOTH));
+    }
+
     public void limpiarPassword() {
         txtPassword.setText("");
     }
@@ -90,7 +130,7 @@ public class PanelInstaLogin extends JPanel {
             controlador.ingresarAlApp(usuario);
 
         } catch (CuentaDesactivadaException ex) {
-            preguntarQueHacerTrasError(ex.getMessage());
+            entrarConCuentaDesactivada(username, password, ex.getMessage());
         } catch (ArchivoCorruptoException ex) {
             JOptionPane.showMessageDialog(this,
                     "No se pudo leer la base de usuarios de INSTA+: " + ex.getMessage(),
@@ -98,6 +138,30 @@ public class PanelInstaLogin extends JPanel {
         } catch (IOException ex) {
             JOptionPane.showMessageDialog(this,
                     "No se pudo preparar el espacio de INSTA+: " + ex.getMessage(),
+                    "Error de archivo", JOptionPane.ERROR_MESSAGE);
+        }
+    }
+
+    /**
+     * La cuenta existe pero está desactivada: si la contraseña es correcta, se deja entrar
+     * únicamente para reactivarla (PantallaInstaPlus bloquea todo lo demás).
+     */
+    private void entrarConCuentaDesactivada(String username, String password, String mensajeExcepcion) {
+        try {
+            UsuarioInsta usuario = GestorInstaPlus.verificarCredenciales(username, password);
+            if (usuario == null) {
+                preguntarQueHacerTrasError(mensajeExcepcion);
+                return;
+            }
+            JOptionPane.showMessageDialog(this,
+                    mensajeExcepcion + "\nSolo podrás entrar para reactivarla desde \"Editar perfil\".",
+                    "Cuenta desactivada", JOptionPane.INFORMATION_MESSAGE);
+            GestorInstaPlus.crearArchivosPersonales(usuario.getUsername());
+            txtPassword.setText("");
+            controlador.ingresarAlApp(usuario);
+        } catch (ArchivoCorruptoException | IOException ex) {
+            JOptionPane.showMessageDialog(this,
+                    "No se pudo leer la base de usuarios de INSTA+: " + ex.getMessage(),
                     "Error de archivo", JOptionPane.ERROR_MESSAGE);
         }
     }

@@ -32,6 +32,9 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
     private PanelInstaChat panelChat;
     private PanelInstaDetallePost panelDetallePost;
 
+    private JButton btnInicioNav;
+    private JButton btnBuscarNav;
+    private JButton btnCrearNav;
     private JButton btnMensajesNav;
     private JLabel lblConexion;
     private final AvisoFlotanteInsta aviso = new AvisoFlotanteInsta();
@@ -122,12 +125,12 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         lblLogo.setBorder(new EmptyBorder(22, 18, 24, 18));
         lblLogo.setAlignmentX(Component.LEFT_ALIGNMENT);
 
-        JButton btnInicio = crearBotonNav("🏠", "Inicio", e -> {
+        btnInicioNav = crearBotonNav("🏠", "Inicio", e -> {
             refrescarFeed();
             mostrarSeccion("FEED");
         });
-        JButton btnBuscar = crearBotonNav("🔍", "Buscar", e -> mostrarSeccion("BUSCAR"));
-        JButton btnCrear = crearBotonNav("➕", "Crear", e -> mostrarSeccion("CREAR"));
+        btnBuscarNav = crearBotonNav("🔍", "Buscar", e -> mostrarSeccion("BUSCAR"));
+        btnCrearNav = crearBotonNav("➕", "Crear", e -> mostrarSeccion("CREAR"));
         btnMensajesNav = crearBotonNav("✉", "Mensajes", e -> {
             refrescarMensajes();
             mostrarSeccion("MENSAJES");
@@ -138,9 +141,9 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         });
 
         barra.add(lblLogo);
-        barra.add(btnInicio);
-        barra.add(btnBuscar);
-        barra.add(btnCrear);
+        barra.add(btnInicioNav);
+        barra.add(btnBuscarNav);
+        barra.add(btnCrearNav);
         barra.add(btnMensajesNav);
         barra.add(btnPerfil);
         barra.add(Box.createVerticalGlue());
@@ -200,7 +203,41 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         refrescarFeed();
         refrescarMensajes();
         cardLayoutRaiz.show(panelRaiz, "APP");
-        mostrarSeccion("FEED");
+        aplicarEstadoCuenta();
+        if (cuentaActiva()) {
+            mostrarSeccion("FEED");
+        } else {
+            panelEditarPerfil.cargarDatos();
+            mostrarSeccion("EDITAR_PERFIL");
+            aviso.mostrar(null, "Tu cuenta está desactivada",
+                    "Solo puedes reactivarla desde Editar perfil. Mientras tanto nadie ve tu contenido.", null);
+        }
+    }
+
+    // ------------------------------------------------------------------------------------------
+    //  Cuenta desactivada: solo se permite ver el perfil propio, editarlo y reactivarlo.
+    // ------------------------------------------------------------------------------------------
+
+    private boolean cuentaActiva() {
+        return usuarioActual != null && usuarioActual.isActiva();
+    }
+
+    /** Secciones permitidas mientras la cuenta está desactivada. */
+    private static boolean seccionPermitidaSinCuentaActiva(String nombre) {
+        return "PERFIL".equals(nombre) || "EDITAR_PERFIL".equals(nombre);
+    }
+
+    /** Habilita o bloquea los botones del menú según el estado de la cuenta. */
+    private void aplicarEstadoCuenta() {
+        boolean activa = cuentaActiva();
+        btnInicioNav.setEnabled(activa);
+        btnBuscarNav.setEnabled(activa);
+        btnCrearNav.setEnabled(activa);
+        btnMensajesNav.setEnabled(activa);
+        if (!activa && !seccionPermitidaSinCuentaActiva(seccionActual)) {
+            panelEditarPerfil.cargarDatos();
+            mostrarSeccion("EDITAR_PERFIL");
+        }
     }
 
     private void conectarCliente() {
@@ -293,7 +330,7 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
 
     /** Todo lo que empuja el servidor llega aquí (ya en el hilo de Swing). */
     private void manejarEvento(PaqueteInsta e) {
-        if (usuarioActual == null) {
+        if (usuarioActual == null || !usuarioActual.isActiva()) {
             return;
         }
         String de = e.getOVacio(PaqueteInsta.DE);
@@ -412,6 +449,12 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
 
     @Override
     public void mostrarSeccion(String nombre) {
+        if (usuarioActual != null && !usuarioActual.isActiva() && !seccionPermitidaSinCuentaActiva(nombre)) {
+            // Con la cuenta desactivada no se puede navegar, publicar, comentar ni mandar mensajes.
+            nombre = "EDITAR_PERFIL";
+            panelEditarPerfil.cargarDatos();
+            aviso.mostrar(null, "Cuenta desactivada", "Reactiva tu cuenta para usar esta opción.", null);
+        }
         seccionActual = nombre;
         cardLayoutApp.show(panelSecciones, nombre);
     }
@@ -484,6 +527,10 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
         if (post == null) {
             return;
         }
+        if (!soyYo(post.getUsernameAutor()) && !GestorInstaPlus.estaActiva(post.getUsernameAutor())) {
+            mostrarAviso("Publicación no disponible", "Esta publicación ya no está disponible.");
+            return;
+        }
         String origen = seccionActual;
         mostrarSeccion("POST");
         panelDetallePost.abrir(post, origen, alCambiar);
@@ -501,6 +548,7 @@ public class PantallaInstaPlus extends JPanel implements InstaControlador {
             return;
         }
         GestorInstaPlus.guardarSesion(usuarioSO, usuarioActual);
+        aplicarEstadoCuenta();
         if (usernameAnterior != null && !usernameAnterior.equals(usuarioActual.getUsername())) {
             conectarCliente(); // el socket se registra con el username nuevo
             refrescarMensajes();

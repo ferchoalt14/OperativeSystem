@@ -7,7 +7,7 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.util.List;
 
-/** Cuadrícula de publicaciones (perfil propio / perfil ajeno). */
+
 public class PanelPostGrid extends JPanel {
 
     private static final int COLUMNAS = 3;
@@ -23,7 +23,7 @@ public class PanelPostGrid extends JPanel {
         setBorder(new EmptyBorder(4, 4, 4, 4));
     }
 
-    /** Vuelve a dibujar la cuadrícula con estos posts (ordenados como vengan en la lista). */
+    
     public void mostrarPosts(List<Post> posts, String mensajeVacio) {
         removeAll();
         if (posts == null || posts.isEmpty()) {
@@ -50,7 +50,7 @@ public class PanelPostGrid extends JPanel {
         lbl.setBackground(EstiloInsta.mezclar(TemaUI.FONDO, TemaUI.TEXTO, 0.05));
         lbl.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         lbl.setBorder(BorderFactory.createLineBorder(TemaUI.BORDE));
-        lbl.setToolTipText(String.format("♥ %,d   💬 %d", post.getLikes(), post.getComentarios().size()));
+        lbl.setToolTipText(String.format("♥ %,d   💬 %d", post.getLikes(), GestorPosts.comentariosVisibles(post).size()));
 
         ImageIcon mini = EstiloInsta.miniaturaCuadrada(post.getRutaImagen(), TAMANO_MINIATURA);
         if (mini != null) {

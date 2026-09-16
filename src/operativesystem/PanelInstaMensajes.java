@@ -5,7 +5,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.util.List;
 
-/** Bandeja de entrada: lista de conversaciones (DMs) del usuario actual. */
+
 public class PanelInstaMensajes extends JPanel {
 
     private final InstaControlador controlador;
@@ -58,7 +58,7 @@ public class PanelInstaMensajes extends JPanel {
         add(scroll, BorderLayout.CENTER);
     }
 
-    /** Actualiza el indicador de notificaciones leído por el hilo de Inbox. */
+
     public void actualizarNotificaciones(int noLeidas) {
         lblNotificaciones.setText("Notificaciones sin leer: " + Math.max(0, noLeidas));
         lblNotificaciones.setForeground(noLeidas > 0 ? TemaUI.ACCENT_OSCURO : TemaUI.TEXTO_SUAVE);
@@ -75,22 +75,17 @@ public class PanelInstaMensajes extends JPanel {
                     "Aviso", JOptionPane.WARNING_MESSAGE);
             return;
         }
-        try {
-            if (GestorInstaPlus.buscarPorUsername(username) == null) {
-                JOptionPane.showMessageDialog(this, "No existe la cuenta @" + username,
-                        "Usuario no encontrado", JOptionPane.WARNING_MESSAGE);
-                return;
-            }
-        } catch (ArchivoCorruptoException ex) {
-            JOptionPane.showMessageDialog(this, "No se pudo verificar el usuario.",
-                    "Error", JOptionPane.ERROR_MESSAGE);
+
+        if (!GestorInstaPlus.estaActiva(username)) {
+            JOptionPane.showMessageDialog(this, "No existe la cuenta @" + username,
+                    "Usuario no encontrado", JOptionPane.WARNING_MESSAGE);
             return;
         }
         txtNuevoDM.setText("");
         controlador.abrirChatConUsuario(username);
     }
 
-    /** Vuelve a cargar la lista de conversaciones desde disco. */
+    
     public void refrescar() {
         panelLista.removeAll();
         UsuarioInsta actual = controlador.getUsuarioActual();

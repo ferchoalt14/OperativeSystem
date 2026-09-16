@@ -5,10 +5,7 @@ import javax.swing.border.EmptyBorder;
 import java.awt.*;
 import java.util.List;
 
-/**
- * Detalle de una publicación mostrado DENTRO de INSTA+ (reemplaza al antiguo DialogoPost).
- * Likes, comentarios y eliminación viajan por sockets.
- */
+
 public class PanelInstaDetallePost extends JPanel {
 
     private final InstaControlador controlador;
@@ -127,7 +124,7 @@ public class PanelInstaDetallePost extends JPanel {
         add(sur, BorderLayout.SOUTH);
     }
 
-    // ------------------------------------------------------------------------------------------
+   
 
     public void abrir(Post post, String seccionOrigen, Runnable alCambiar) {
         this.post = post;
@@ -141,7 +138,7 @@ public class PanelInstaDetallePost extends JPanel {
         SwingUtilities.invokeLater(() -> scroll.getVerticalScrollBar().setValue(0));
     }
 
-    /** ¿Está mostrando este post? */
+
     public boolean muestra(String autor, String postId) {
         return post != null && post.getId().equals(postId) && post.getUsernameAutor().equalsIgnoreCase(autor);
     }
@@ -176,7 +173,7 @@ public class PanelInstaDetallePost extends JPanel {
         controlador.mostrarSeccion(seccionOrigen);
     }
 
-    // ------------------------------------------------------------------------------------------
+
 
     private void construirContenido() {
         UsuarioInsta actual = controlador.getUsuarioActual();
@@ -213,7 +210,7 @@ public class PanelInstaDetallePost extends JPanel {
         JLabel lblLikes = EstiloInsta.etiqueta(formatear(post.getLikes()) + " me gusta", 13, true, TemaUI.TEXTO);
         btnLike.addActionListener(e -> alternarLike(btnLike, lblLikes));
 
-        List<Comentario> comentarios = post.getComentarios();
+        List<Comentario> comentarios = GestorPosts.comentariosVisibles(post);
         JLabel lblNumComentarios = EstiloInsta.etiqueta("💬 " + comentarios.size(), 13, false, TemaUI.TEXTO_SUAVE);
 
         JPanel filaAcciones = EstiloInsta.filaAjustada(new BorderLayout());
@@ -227,7 +224,7 @@ public class PanelInstaDetallePost extends JPanel {
         filaAcciones.add(EstiloInsta.etiqueta(post.getFechaTexto(), 11, false, TemaUI.TEXTO_SUAVE), BorderLayout.EAST);
         contenido.add(filaAcciones);
 
-        // Caption
+     
         if (post.getTexto() != null && !post.getTexto().isBlank()) {
             contenido.add(Box.createVerticalStrut(6));
             JPanel caption = EstiloInsta.filaAjustada(new BorderLayout(0, 2));
@@ -236,7 +233,7 @@ public class PanelInstaDetallePost extends JPanel {
             contenido.add(caption);
         }
 
-        // Menciones
+        
         ListaEnlazada<String> menciones = post.getMenciones();
         if (!menciones.estaVacia()) {
             JPanel panelMenciones = EstiloInsta.filaAjustada(new FlowLayout(FlowLayout.LEFT, 2, 0));
@@ -250,7 +247,7 @@ public class PanelInstaDetallePost extends JPanel {
             contenido.add(panelMenciones);
         }
 
-        // Comentarios
+      
         contenido.add(Box.createVerticalStrut(14));
         JSeparator sep = new JSeparator();
         sep.setForeground(TemaUI.BORDE);
@@ -305,7 +302,7 @@ public class PanelInstaDetallePost extends JPanel {
         return fila;
     }
 
-    // ------------------------------------------------------------------------------------------
+    
 
     private void alternarLike(JButton btnLike, JLabel lblLikes) {
         if (post == null || controlador.getUsuarioActual() == null) {
